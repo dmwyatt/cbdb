@@ -9,7 +9,10 @@
 <body>
     <header>
         <div class="container">
-            <h1><a href="/">Calibre Library</a></h1>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h1 style="margin: 0;"><a href="/">Calibre Library</a></h1>
+                <a href="/setup" style="color: white; text-decoration: none; font-size: 0.9rem;">⚙️ Settings</a>
+            </div>
             <form method="get" action="/" class="search-form">
                 <input type="text" name="search" placeholder="Search books or authors..." value="{{ search or '' }}">
                 <button type="submit">Search</button>
