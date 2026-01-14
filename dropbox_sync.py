@@ -1,59 +1,71 @@
 import os
-import dropbox
-from dropbox.exceptions import ApiError
+import requests
 
 
 class DropboxSync:
-    """Handle synchronization of Calibre database from Dropbox."""
+    """Handle synchronization of Calibre database from Dropbox using shared links."""
 
-    def __init__(self, access_token, metadata_path):
+    def __init__(self, shared_link):
         """
         Initialize Dropbox sync.
 
         Args:
-            access_token: Dropbox API access token
-            metadata_path: Path to metadata.db in Dropbox (e.g., /Calibre Library/metadata.db)
+            shared_link: Dropbox shared link URL to the folder containing metadata.db
+                        Example: https://www.dropbox.com/sh/abc123xyz/...
         """
-        if not access_token:
-            raise ValueError("DROPBOX_ACCESS_TOKEN is required")
-        if not metadata_path:
-            raise ValueError("DROPBOX_METADATA_PATH is required")
+        if not shared_link:
+            raise ValueError("DROPBOX_SHARED_LINK is required")
 
-        self.dbx = dropbox.Dropbox(access_token)
-        self.metadata_path = metadata_path
+        self.shared_link = shared_link.rstrip('/')
         self.local_path = 'metadata.db'
+
+    def _get_download_url(self):
+        """Convert shared link to direct download URL for metadata.db."""
+        # Add metadata.db to the path and force download
+        if '?' in self.shared_link:
+            return f"{self.shared_link}&dl=1&subpath=/metadata.db"
+        else:
+            return f"{self.shared_link}?dl=1&subpath=/metadata.db"
 
     def sync(self):
         """Download the metadata.db file from Dropbox."""
         try:
-            print(f"Syncing database from Dropbox: {self.metadata_path}")
+            download_url = self._get_download_url()
+            print(f"Syncing database from Dropbox shared link...")
 
             # Download file
-            metadata, response = self.dbx.files_download(self.metadata_path)
+            response = requests.get(download_url, timeout=60)
+            response.raise_for_status()
+
+            # Check if we got actual data
+            if len(response.content) < 1000:
+                raise Exception("Downloaded file seems too small. Check your shared link and ensure metadata.db exists in the folder.")
 
             # Save to local file
             with open(self.local_path, 'wb') as f:
                 f.write(response.content)
 
-            print(f"Database synced successfully. Size: {metadata.size} bytes")
+            file_size = len(response.content)
+            print(f"Database synced successfully. Size: {file_size} bytes")
             return True
 
-        except ApiError as e:
-            if e.error.is_path() and e.error.get_path().is_not_found():
-                raise Exception(f"File not found in Dropbox: {self.metadata_path}")
-            else:
-                raise Exception(f"Dropbox API error: {str(e)}")
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Failed to download from Dropbox: {str(e)}")
         except Exception as e:
             raise Exception(f"Failed to sync database: {str(e)}")
 
     def get_file_info(self):
-        """Get information about the metadata.db file in Dropbox."""
+        """Get basic information about the synced database file."""
         try:
-            metadata = self.dbx.files_get_metadata(self.metadata_path)
-            return {
-                'name': metadata.name,
-                'size': metadata.size,
-                'modified': metadata.server_modified.isoformat() if hasattr(metadata, 'server_modified') else None
-            }
-        except ApiError as e:
+            if os.path.exists(self.local_path):
+                size = os.path.getsize(self.local_path)
+                modified = os.path.getmtime(self.local_path)
+                return {
+                    'name': 'metadata.db',
+                    'size': size,
+                    'modified': modified
+                }
+            else:
+                return None
+        except Exception as e:
             raise Exception(f"Failed to get file info: {str(e)}")

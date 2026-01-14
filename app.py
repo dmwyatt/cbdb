@@ -11,8 +11,7 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-product
 
 # Initialize Dropbox sync
 dropbox_sync = DropboxSync(
-    access_token=os.getenv('DROPBOX_ACCESS_TOKEN'),
-    metadata_path=os.getenv('DROPBOX_METADATA_PATH')
+    shared_link=os.getenv('DROPBOX_SHARED_LINK')
 )
 
 # Initialize database

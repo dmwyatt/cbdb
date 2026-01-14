@@ -1,131 +1,69 @@
 # Calibre Library Web App
 
-A simple, elegant web application for browsing your Calibre book library stored on Dropbox. Built with Flask and designed for easy deployment on Railway.
+A simple web app for browsing your Calibre book library from Dropbox. Designed for ultra-easy deployment on Railway.
 
 ## Features
 
 - Browse your entire Calibre library
 - Search books by title or author
-- View detailed book information including:
-  - Authors, series, publishers
-  - Ratings and tags
-  - Available formats
-  - Book descriptions
-  - Identifiers (ISBN, etc.)
-- Automatic synchronization with Dropbox
+- View detailed book information (authors, series, ratings, tags, formats, descriptions)
+- Automatic sync with Dropbox
 - Clean, responsive design
-- Pagination for large libraries
+- No authentication required!
 
-## Prerequisites
+## Super Simple Setup
 
-- A Calibre library stored on Dropbox
-- A Dropbox access token
-- Python 3.11+ (for local development)
-- Railway account (for deployment)
+### Step 1: Share Your Calibre Library on Dropbox
 
-## Setup
+1. Open Dropbox (app or web)
+2. Find your Calibre Library folder (the one with `metadata.db` inside)
+3. Right-click → Share → Create link
+4. Copy the link (looks like `https://www.dropbox.com/sh/abc123xyz/...`)
+5. That's it!
 
-### 1. Get Dropbox Access Token
+### Step 2: Deploy to Railway
 
-1. Go to [Dropbox App Console](https://www.dropbox.com/developers/apps)
-2. Click "Create app"
-3. Choose "Scoped access"
-4. Choose "Full Dropbox" or "App folder" (depending on your preference)
-5. Name your app
-6. Once created, go to the "Permissions" tab and enable:
-   - `files.metadata.read`
-   - `files.content.read`
-7. Go to the "Settings" tab
-8. Under "Generated access token", click "Generate" to create an access token
-9. Copy this token - you'll need it for configuration
+**From Mobile or Desktop:**
 
-### 2. Find Your Calibre Library Path
+1. Go to [railway.app](https://railway.app)
+2. Sign in with GitHub
+3. Click "New Project" → "Deploy from GitHub repo"
+4. Select this repository
+5. Railway will start building automatically
 
-Your Calibre library path in Dropbox should point to the `metadata.db` file. For example:
-- If your library is at the root: `/Calibre Library/metadata.db`
-- If it's in a subfolder: `/Books/Calibre Library/metadata.db`
-
-### 3. Local Development
-
-1. Clone this repository:
-```bash
-git clone <your-repo-url>
-cd cbdb
-```
-
-2. Create a virtual environment and install dependencies:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-3. Create a `.env` file based on `.env.example`:
-```bash
-cp .env.example .env
-```
-
-4. Edit `.env` with your credentials:
-```env
-DROPBOX_ACCESS_TOKEN=your_actual_dropbox_token_here
-DROPBOX_METADATA_PATH=/Calibre Library/metadata.db
-FLASK_SECRET_KEY=your_secret_key_here
-```
-
-5. Run the application:
-```bash
-python app.py
-```
-
-6. Open your browser to `http://localhost:5000`
-
-## Deploying to Railway
-
-Railway makes deployment incredibly simple:
-
-### Option 1: Deploy from GitHub
-
-1. Push your code to GitHub (if not already done)
-2. Go to [Railway](https://railway.app)
-3. Click "New Project"
-4. Select "Deploy from GitHub repo"
-5. Select your repository
-6. Railway will automatically detect the configuration
-
-### Option 2: Deploy with Railway CLI
-
-1. Install Railway CLI:
-```bash
-npm install -g @railway/cli
-```
-
-2. Login to Railway:
-```bash
-railway login
-```
-
-3. Initialize and deploy:
-```bash
-railway init
-railway up
-```
-
-### Configure Environment Variables
+### Step 3: Add Your Dropbox Link
 
 In Railway dashboard:
 
-1. Go to your project
-2. Click on "Variables"
-3. Add the following variables:
-   - `DROPBOX_ACCESS_TOKEN`: Your Dropbox access token
-   - `DROPBOX_METADATA_PATH`: Path to your metadata.db in Dropbox (e.g., `/Calibre Library/metadata.db`)
-   - `FLASK_SECRET_KEY`: A random secret key (generate with `python -c "import secrets; print(secrets.token_hex(32))"`)
+1. Click on your project
+2. Go to "Variables" tab
+3. Add these two variables:
+   - `DROPBOX_SHARED_LINK` → Paste your Dropbox link from Step 1
+   - `FLASK_SECRET_KEY` → Any random text (e.g., `my-secret-key-123`)
+4. Railway will automatically redeploy
 
-4. Railway will automatically redeploy with the new variables
+### Step 4: Done!
 
-### Access Your App
+Railway gives you a URL (like `your-app.railway.app`). Visit it to see your library!
 
-Once deployed, Railway will provide you with a URL like `your-app.railway.app`. Visit this URL to access your Calibre library!
+## Local Development (Optional)
+
+```bash
+# Clone and setup
+git clone <your-repo>
+cd cbdb
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+
+# Create .env file
+cp .env.example .env
+# Edit .env and add your DROPBOX_SHARED_LINK
+
+# Run
+python app.py
+# Visit http://localhost:5000
+```
 
 ## Project Structure
 
@@ -166,30 +104,25 @@ cbdb/
 
 ## Troubleshooting
 
-### "File not found in Dropbox"
-
-- Verify your `DROPBOX_METADATA_PATH` is correct
-- Make sure the path starts with `/`
-- Check that your Dropbox token has the correct permissions
-
 ### "No books displayed"
 
-- Ensure the metadata.db file was successfully downloaded
-- Check Railway logs: `railway logs`
-- Verify your Calibre library has books in it
+- Check your Dropbox shared link is correct
+- Make sure `metadata.db` is in the shared folder
+- Check Railway logs for errors
+- Try triggering a manual sync: `POST /api/sync`
 
-### Database not updating
+### "Downloaded file seems too small"
 
-- Trigger a manual sync by calling `POST /api/sync`
-- Check that your Dropbox token is still valid
-- Restart the Railway service
+- Ensure you shared the Calibre Library folder (containing `metadata.db`)
+- The shared link should end with the folder name, not a specific file
 
 ## Security Notes
 
-- Never commit your `.env` file or expose your Dropbox token
-- Use a strong `FLASK_SECRET_KEY` in production
-- The app only has read access to your Dropbox
-- No authentication is built-in - add your own if needed for public deployment
+- The shared link makes your book metadata publicly accessible
+- Anyone with the link can see your book titles/authors
+- Actual book files are NOT exposed (only metadata.db)
+- Consider this acceptable for personal use
+- Don't commit your `.env` file
 
 ## Contributing
 
