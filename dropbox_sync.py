@@ -1,5 +1,7 @@
 import os
 import requests
+from datetime import datetime
+from email.utils import parsedate_to_datetime
 
 
 class DropboxSync:
@@ -27,6 +29,55 @@ class DropboxSync:
         else:
             return f"{self.shared_link}?dl=1&subpath=/metadata.db"
 
+    def get_remote_last_modified(self):
+        """
+        Get the Last-Modified timestamp from Dropbox without downloading the file.
+
+        Returns:
+            datetime object or None if unable to determine
+        """
+        try:
+            download_url = self._get_download_url()
+            response = requests.head(download_url, timeout=10, allow_redirects=True)
+            response.raise_for_status()
+
+            last_modified_str = response.headers.get('Last-Modified')
+            if last_modified_str:
+                return parsedate_to_datetime(last_modified_str)
+            return None
+        except Exception as e:
+            print(f"Warning: Could not get remote Last-Modified: {e}")
+            return None
+
+    def needs_sync(self):
+        """
+        Check if local database needs to be synced from Dropbox.
+
+        Returns:
+            True if sync is needed, False otherwise
+        """
+        # If local file doesn't exist, we need to sync
+        if not os.path.exists(self.local_path):
+            return True
+
+        # If local file is empty, we need to sync
+        if os.path.getsize(self.local_path) == 0:
+            return True
+
+        # Check if remote file is newer
+        remote_modified = self.get_remote_last_modified()
+        if remote_modified is None:
+            # If we can't determine remote timestamp, assume we need to sync
+            return True
+
+        local_modified = datetime.fromtimestamp(os.path.getmtime(self.local_path))
+
+        # Make remote_modified timezone-naive for comparison
+        if remote_modified.tzinfo is not None:
+            remote_modified = remote_modified.replace(tzinfo=None)
+
+        return remote_modified > local_modified
+
     def sync(self):
         """Download the metadata.db file from Dropbox."""
         try:
@@ -37,15 +88,32 @@ class DropboxSync:
             response = requests.get(download_url, timeout=60)
             response.raise_for_status()
 
-            # Check if we got actual data
-            if len(response.content) < 1000:
-                raise Exception("Downloaded file seems too small. Check your shared link and ensure metadata.db exists in the folder.")
+            content = response.content
 
-            # Save to local file
-            with open(self.local_path, 'wb') as f:
-                f.write(response.content)
+            # Validate downloaded content
+            if len(content) < 100:
+                raise Exception(
+                    "Downloaded file is unexpectedly small and may be invalid. "
+                    "Check your shared link and ensure metadata.db exists in the folder."
+                )
 
-            file_size = len(response.content)
+            # Verify SQLite file header (magic bytes)
+            if not content.startswith(b"SQLite format 3\x00"):
+                raise Exception(
+                    "Downloaded file does not appear to be a valid SQLite database. "
+                    "Ensure the Dropbox shared link points to a folder containing metadata.db."
+                )
+
+            # Save to local file atomically: write to temp file, then rename
+            temp_path = self.local_path + ".tmp"
+            with open(temp_path, 'wb') as f:
+                f.write(content)
+                f.flush()
+                os.fsync(f.fileno())
+
+            os.replace(temp_path, self.local_path)
+
+            file_size = len(content)
             print(f"Database synced successfully. Size: {file_size} bytes")
             return True
 

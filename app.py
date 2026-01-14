@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify
 from db import CalibreDB
 from dropbox_sync import DropboxSync
 
@@ -11,6 +11,25 @@ calibre_db = CalibreDB('metadata.db')
 # Store Dropbox link in memory (for single-user deployment)
 # In production on Railway, this works fine since it's stateless anyway
 dropbox_link = os.getenv('DROPBOX_SHARED_LINK', None)
+
+
+def ensure_db_synced():
+    """Check if database needs syncing from Dropbox and sync if needed."""
+    if not dropbox_link:
+        return False
+
+    try:
+        sync_obj = DropboxSync(dropbox_link)
+        if sync_obj.needs_sync():
+            print("Database is outdated, syncing from Dropbox...")
+            sync_obj.sync()
+            return True
+        else:
+            print("Database is up to date, no sync needed")
+            return False
+    except Exception as e:
+        print(f"Warning: Could not check/sync database: {e}")
+        return False
 
 
 @app.route('/setup')
@@ -51,6 +70,9 @@ def index():
         # Redirect to setup if no database
         return render_template('setup.html')
 
+    # Sync from Dropbox if needed
+    ensure_db_synced()
+
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
     search = request.args.get('search', '')
@@ -77,6 +99,9 @@ def index():
 @app.route('/book/<int:book_id>')
 def book_detail(book_id):
     """Display detailed information about a specific book."""
+    # Sync from Dropbox if needed
+    ensure_db_synced()
+
     book = calibre_db.get_book_detail(book_id)
     if not book:
         return "Book not found", 404
@@ -135,8 +160,11 @@ if __name__ == '__main__':
     if dropbox_link:
         try:
             sync_obj = DropboxSync(dropbox_link)
-            sync_obj.sync()
-            print("Database synced successfully on startup")
+            if sync_obj.needs_sync():
+                sync_obj.sync()
+                print("Database synced successfully on startup")
+            else:
+                print("Database is up to date on startup")
         except Exception as e:
             print(f"Warning: Could not sync database: {e}")
     else:
