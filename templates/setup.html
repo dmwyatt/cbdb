@@ -155,9 +155,13 @@
 
             const dropboxLink = dropboxLinkInput.value.trim();
 
-            // Basic validation
-            if (!dropboxLink.includes('dropbox.com')) {
-                showError('Please enter a valid Dropbox link');
+            // Validate Dropbox URL
+            const isValidDropboxLink =
+                dropboxLink.startsWith('https://www.dropbox.com/') ||
+                dropboxLink.startsWith('https://dropbox.com/');
+
+            if (!isValidDropboxLink) {
+                showError('Please enter a valid Dropbox link starting with https://www.dropbox.com/ or https://dropbox.com/');
                 return;
             }
 

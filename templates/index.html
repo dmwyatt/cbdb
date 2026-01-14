@@ -19,15 +19,9 @@
     {% for book in books %}
     <div class="book-card">
         <a href="{{ url_for('book_detail', book_id=book.id) }}" class="book-link">
-            {% if book.has_cover %}
             <div class="book-cover placeholder-cover">
                 <span>📚</span>
             </div>
-            {% else %}
-            <div class="book-cover placeholder-cover">
-                <span>📚</span>
-            </div>
-            {% endif %}
             <div class="book-info">
                 <h3 class="book-title">{{ book.title }}</h3>
                 {% if book.authors %}
