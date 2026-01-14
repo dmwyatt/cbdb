@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Calibre Library{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h1 style="margin: 0;"><a href="/">Calibre Library</a></h1>
+                <a href="/setup" style="color: white; text-decoration: none; font-size: 0.9rem;">⚙️ Settings</a>
+            </div>
+            <form method="get" action="/" class="search-form">
+                <input type="text" name="search" placeholder="Search books or authors..." value="{{ search or '' }}">
+                <button type="submit">Search</button>
+            </form>
+        </div>
+    </header>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>Powered by Calibre</p>
+        </div>
+    </footer>
+</body>
+</html>
