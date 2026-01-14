@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}{{ book.title }} - Calibre Library{% endblock %}
+
+{% block content %}
+<div class="book-detail">
+    <a href="/" class="back-link">&larr; Back to Library</a>
+
+    <div class="book-detail-container">
+        <div class="book-detail-cover">
+            {% if book.has_cover %}
+            <div class="book-cover-large placeholder-cover">
+                <span>📚</span>
+            </div>
+            {% else %}
+            <div class="book-cover-large placeholder-cover">
+                <span>📚</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="book-detail-info">
+            <h1>{{ book.title }}</h1>
+
+            {% if book.authors %}
+            <p class="detail-authors">
+                <strong>Author{% if book.authors|length > 1 %}s{% endif %}:</strong>
+                {{ book.authors | join(', ') }}
+            </p>
+            {% endif %}
+
+            {% if book.series %}
+            <p class="detail-series">
+                <strong>Series:</strong> {{ book.series }}{% if book.series_index %} #{{ book.series_index }}{% endif %}
+            </p>
+            {% endif %}
+
+            {% if book.publisher %}
+            <p><strong>Publisher:</strong> {{ book.publisher }}</p>
+            {% endif %}
+
+            {% if book.pubdate %}
+            <p><strong>Published:</strong> {{ book.pubdate[:10] }}</p>
+            {% endif %}
+
+            {% if book.rating %}
+            <div class="detail-rating">
+                <strong>Rating:</strong>
+                {% set stars = (book.rating / 2) | int %}
+                {% for i in range(stars) %}★{% endfor %}
+                {% for i in range(5 - stars) %}☆{% endfor %}
+            </div>
+            {% endif %}
+
+            {% if book.tags %}
+            <div class="detail-tags">
+                <strong>Tags:</strong>
+                {% for tag in book.tags %}
+                <span class="tag">{{ tag }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if book.languages %}
+            <p><strong>Language{% if book.languages|length > 1 %}s{% endif %}:</strong> {{ book.languages | join(', ') }}</p>
+            {% endif %}
+
+            {% if book.formats %}
+            <div class="detail-formats">
+                <strong>Available Formats:</strong>
+                {% for format in book.formats %}
+                <span class="format-badge">{{ format.format }}</span>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if book.identifiers %}
+            <div class="detail-identifiers">
+                <strong>Identifiers:</strong>
+                {% for id_type, id_val in book.identifiers.items() %}
+                <div>{{ id_type }}: {{ id_val }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if book.comments %}
+            <div class="detail-description">
+                <strong>Description:</strong>
+                <div class="description-text">{{ book.comments | safe }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

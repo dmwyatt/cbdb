@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Calibre Library{% if search %} - Search: {{ search }}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="library-header">
+    <h2>
+        {% if search %}
+            Search Results for "{{ search }}"
+        {% else %}
+            All Books
+        {% endif %}
+    </h2>
+    <p class="book-count">{{ total }} book{% if total != 1 %}s{% endif %} found</p>
+</div>
+
+{% if books %}
+<div class="books-grid">
+    {% for book in books %}
+    <div class="book-card">
+        <a href="{{ url_for('book_detail', book_id=book.id) }}" class="book-link">
+            {% if book.has_cover %}
+            <div class="book-cover placeholder-cover">
+                <span>📚</span>
+            </div>
+            {% else %}
+            <div class="book-cover placeholder-cover">
+                <span>📚</span>
+            </div>
+            {% endif %}
+            <div class="book-info">
+                <h3 class="book-title">{{ book.title }}</h3>
+                {% if book.authors %}
+                <p class="book-author">{{ book.authors }}</p>
+                {% endif %}
+                {% if book.series %}
+                <p class="book-series">{{ book.series }}{% if book.series_index %} #{{ book.series_index }}{% endif %}</p>
+                {% endif %}
+                {% if book.rating %}
+                <div class="book-rating">
+                    {% set stars = (book.rating / 2) | int %}
+                    {% for i in range(stars) %}★{% endfor %}
+                    {% for i in range(5 - stars) %}☆{% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+    {% if page > 1 %}
+    <a href="?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}" class="pagination-link">&laquo; Previous</a>
+    {% endif %}
+
+    <span class="pagination-info">Page {{ page }} of {{ total_pages }}</span>
+
+    {% if page < total_pages %}
+    <a href="?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}" class="pagination-link">Next &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="no-results">
+    <p>No books found{% if search %} for "{{ search }}"{% endif %}.</p>
+    {% if search %}
+    <a href="/" class="button">View All Books</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
