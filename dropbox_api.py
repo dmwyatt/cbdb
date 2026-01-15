@@ -23,6 +23,36 @@ class DropboxAPI:
                 "Set DROPBOX_ACCESS_TOKEN environment variable."
             )
 
+        # Validate token format
+        self._validate_token_format()
+
+    def _validate_token_format(self):
+        """Validate that the token looks like a valid Dropbox token."""
+        token = self.access_token
+
+        # Check for whitespace issues
+        if token != token.strip():
+            raise ValueError(
+                "Dropbox access token contains leading or trailing whitespace. "
+                "Please remove any extra spaces from the DROPBOX_ACCESS_TOKEN value."
+            )
+
+        # Dropbox short-lived tokens start with 'sl.'
+        # Long-lived tokens (legacy) are longer alphanumeric strings
+        if not token.startswith('sl.') and len(token) < 60:
+            raise ValueError(
+                "Dropbox access token appears invalid (too short). "
+                "Tokens should start with 'sl.' and be 130+ characters. "
+                "Please verify you copied the complete token."
+            )
+
+        if token.startswith('sl.') and len(token) < 100:
+            raise ValueError(
+                "Dropbox access token appears truncated. "
+                "Short-lived tokens starting with 'sl.' should be 130+ characters. "
+                "Please verify you copied the complete token."
+            )
+
     def _headers(self):
         """Get authorization headers."""
         return {
@@ -56,6 +86,15 @@ class DropboxAPI:
                 timeout=10,
             )
 
+            if response.status_code == 401:
+                raise Exception(
+                    "Dropbox authentication failed. Please check:\n"
+                    "1. Token was copied correctly (no extra spaces or missing characters)\n"
+                    "2. App has 'files.metadata.read' and 'files.content.read' permissions\n"
+                    "3. App uses 'Full Dropbox' access (not 'App folder')\n"
+                    "Generate a new token at https://www.dropbox.com/developers/apps"
+                )
+
             if response.status_code == 409:
                 # Path not found
                 error_data = response.json()
@@ -86,6 +125,15 @@ class DropboxAPI:
                 json={"path": path},
                 timeout=30,
             )
+
+            if response.status_code == 401:
+                raise Exception(
+                    "Dropbox authentication failed. Please check:\n"
+                    "1. Token was copied correctly (no extra spaces or missing characters)\n"
+                    "2. App has 'files.metadata.read' and 'files.content.read' permissions\n"
+                    "3. App uses 'Full Dropbox' access (not 'App folder')\n"
+                    "Generate a new token at https://www.dropbox.com/developers/apps"
+                )
 
             if response.status_code == 409:
                 error_data = response.json()
@@ -119,6 +167,15 @@ class DropboxAPI:
                 headers=self._content_headers({"path": path}),
                 timeout=120,
             )
+
+            if response.status_code == 401:
+                raise Exception(
+                    "Dropbox authentication failed. Please check:\n"
+                    "1. Token was copied correctly (no extra spaces or missing characters)\n"
+                    "2. App has 'files.metadata.read' and 'files.content.read' permissions\n"
+                    "3. App uses 'Full Dropbox' access (not 'App folder')\n"
+                    "Generate a new token at https://www.dropbox.com/developers/apps"
+                )
 
             if response.status_code == 409:
                 error_data = response.json()
