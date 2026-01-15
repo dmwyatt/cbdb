@@ -1,7 +1,7 @@
-providers = ["python", "node"]
-
+# Let nixpacks auto-detect Python, just add Node.js for frontend build
 [phases.setup]
-nixPkgs = ["nodejs_20", "python311", "python311Packages.pip"]
+nixPkgs = ["nodejs_20"]
 
 [phases.build]
+dependsOn = ["install"]
 cmds = ["cd frontend && npm ci && npm run build"]
