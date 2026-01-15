@@ -79,6 +79,8 @@
             border-radius: 4px;
             margin-bottom: 1rem;
             display: none;
+            white-space: pre-wrap;
+            text-align: left;
         }
         .steps {
             background-color: #f8f9fa;
@@ -104,16 +106,21 @@
     <div class="container">
         <div class="setup-container">
             <h1>📚 Welcome to Calibre Library</h1>
-            <p>To get started, you need to provide a shared link to your Calibre Library folder on Dropbox.</p>
+            <p>To get started, you need to provide a shared link to the <strong>metadata.db file</strong> in your Calibre Library on Dropbox.</p>
 
             <div class="steps">
                 <h3>How to get your Dropbox link:</h3>
                 <ol>
                     <li>Open Dropbox (app or web browser)</li>
-                    <li>Find your Calibre Library folder (contains metadata.db)</li>
-                    <li>Right-click → Share → Create link</li>
-                    <li>Copy the link and paste it below</li>
+                    <li>Navigate into your Calibre Library folder</li>
+                    <li><strong>Click on the metadata.db file</strong> to select it</li>
+                    <li>Click Share → Copy link</li>
+                    <li>Paste the link below</li>
                 </ol>
+                <p style="margin-top: 1rem; color: #c0392b; font-size: 0.9rem;">
+                    <strong>Important:</strong> Share the metadata.db <em>file</em>, not the folder.
+                    The link should contain <code>/scl/fi/</code> (file), not <code>/scl/fo/</code> (folder).
+                </p>
             </div>
 
             <div class="error-message" id="errorMessage"></div>
@@ -125,10 +132,10 @@
                         type="url"
                         id="dropboxLink"
                         name="dropboxLink"
-                        placeholder="https://www.dropbox.com/sh/abc123xyz/..."
+                        placeholder="https://www.dropbox.com/scl/fi/.../metadata.db?..."
                         required
                     >
-                    <small>Example: https://www.dropbox.com/sh/abc123xyz/AAA...</small>
+                    <small>Example: https://www.dropbox.com/scl/fi/abc123xyz/metadata.db?rlkey=...</small>
                 </div>
 
                 <button type="submit" class="setup-button" id="submitButton">
@@ -162,6 +169,18 @@
 
             if (!isValidDropboxLink) {
                 showError('Please enter a valid Dropbox link starting with https://www.dropbox.com/ or https://dropbox.com/');
+                return;
+            }
+
+            // Check for folder links (common mistake)
+            if (dropboxLink.includes('/scl/fo/') || dropboxLink.includes('/sh/')) {
+                showError(
+                    'This appears to be a FOLDER link. Please share the metadata.db FILE directly instead.\n\n' +
+                    '1. Open the folder in Dropbox\n' +
+                    '2. Click on metadata.db\n' +
+                    '3. Click Share → Copy link\n\n' +
+                    'The URL should contain "/scl/fi/" (file), not "/scl/fo/" (folder).'
+                );
                 return;
             }
 
