@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response
 from db import CalibreDB
 from dropbox_api import DropboxAPI
 
@@ -214,6 +214,67 @@ def series():
     """Get list of all series."""
     series_list = calibre_db.get_series()
     return jsonify(series_list)
+
+
+@app.route('/api/download-db')
+def download_db():
+    """
+    Download metadata.db from Dropbox for browser-side SQLite.
+    This proxies the download to keep the Dropbox token server-side.
+    """
+    api = get_dropbox_api()
+    if not api:
+        return jsonify({
+            'success': False,
+            'error': 'Dropbox access token not configured'
+        }), 500
+
+    library_path = get_library_path()
+    if not library_path:
+        return jsonify({
+            'success': False,
+            'error': 'No library path provided. Set X-Library-Path header.'
+        }), 400
+
+    try:
+        # Normalize path
+        if not library_path.startswith("/"):
+            library_path = "/" + library_path
+        library_path = library_path.rstrip("/")
+        metadata_path = f"{library_path}/metadata.db"
+
+        # Download from Dropbox
+        content = api.download_file(metadata_path)
+
+        # Validate SQLite header
+        if not content.startswith(b"SQLite format 3\x00"):
+            return jsonify({
+                'success': False,
+                'error': 'Downloaded file is not a valid SQLite database'
+            }), 500
+
+        # Return as binary response
+        return Response(
+            content,
+            mimetype='application/x-sqlite3',
+            headers={
+                'Content-Disposition': 'attachment; filename=metadata.db',
+                'Content-Length': len(content),
+                'Cache-Control': 'no-cache'
+            }
+        )
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/wasm')
+def wasm_browser():
+    """Serve the WASM SQLite browser page."""
+    return render_template('wasm.html')
 
 
 if __name__ == '__main__':
