@@ -23,6 +23,36 @@ class DropboxAPI:
                 "Set DROPBOX_ACCESS_TOKEN environment variable."
             )
 
+        # Validate token format
+        self._validate_token_format()
+
+    def _validate_token_format(self):
+        """Validate that the token looks like a valid Dropbox token."""
+        token = self.access_token
+
+        # Check for whitespace issues
+        if token != token.strip():
+            raise ValueError(
+                "Dropbox access token contains leading or trailing whitespace. "
+                "Please remove any extra spaces from the DROPBOX_ACCESS_TOKEN value."
+            )
+
+        # Dropbox short-lived tokens start with 'sl.'
+        # Long-lived tokens (legacy) are longer alphanumeric strings
+        if not token.startswith('sl.') and len(token) < 60:
+            raise ValueError(
+                "Dropbox access token appears invalid (too short). "
+                "Tokens should start with 'sl.' and be 130+ characters. "
+                "Please verify you copied the complete token."
+            )
+
+        if token.startswith('sl.') and len(token) < 100:
+            raise ValueError(
+                "Dropbox access token appears truncated. "
+                "Short-lived tokens starting with 'sl.' should be 130+ characters. "
+                "Please verify you copied the complete token."
+            )
+
     def _headers(self):
         """Get authorization headers."""
         return {
