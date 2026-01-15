@@ -3,6 +3,26 @@
 {% block title %}Calibre Library{% if search %} - Search: {{ search }}{% endif %}{% endblock %}
 
 {% block content %}
+<!-- Error shown when access token not configured -->
+<div id="tokenErrorSection" style="display: none;">
+    <div class="setup-inline token-error-box">
+        <h2>Dropbox Access Token Required</h2>
+        <p>A Dropbox access token must be configured before you can use this application.</p>
+
+        <div class="token-instructions">
+            <h3>Setup Instructions:</h3>
+            <ol>
+                <li>Go to <a href="https://www.dropbox.com/developers/apps" target="_blank">dropbox.com/developers/apps</a></li>
+                <li>Create a new app with "Scoped access" and "Full Dropbox"</li>
+                <li>In the Permissions tab, enable <code>files.metadata.read</code> and <code>files.content.read</code></li>
+                <li>In the Settings tab, click "Generate" under "Generated access token"</li>
+                <li>Set the <code>DROPBOX_ACCESS_TOKEN</code> environment variable with your token</li>
+                <li>Restart the application</li>
+            </ol>
+        </div>
+    </div>
+</div>
+
 <!-- Setup form shown when no library path configured -->
 <div id="setupSection" style="display: none;">
     <div class="setup-inline">
@@ -101,6 +121,7 @@
     const LIBRARY_PATH_KEY = 'calibreLibraryPath';
     const needsSetup = {{ 'true' if needs_setup else 'false' }};
 
+    const tokenErrorSection = document.getElementById('tokenErrorSection');
     const setupSection = document.getElementById('setupSection');
     const librarySection = document.getElementById('librarySection');
     const setupForm = document.getElementById('setupForm');
@@ -111,8 +132,15 @@
     // Get stored library path
     const storedPath = localStorage.getItem(LIBRARY_PATH_KEY);
 
+    function showTokenError() {
+        tokenErrorSection.style.display = 'block';
+        setupSection.style.display = 'none';
+        librarySection.style.display = 'none';
+    }
+
     // Determine if we need to show setup
     function showSetup() {
+        tokenErrorSection.style.display = 'none';
         setupSection.style.display = 'block';
         librarySection.style.display = 'none';
         if (storedPath) {
@@ -121,6 +149,7 @@
     }
 
     function showLibrary() {
+        tokenErrorSection.style.display = 'none';
         setupSection.style.display = 'none';
         librarySection.style.display = 'block';
     }
@@ -134,12 +163,36 @@
         setupError.style.display = 'none';
     }
 
-    // Check if setup is needed
-    if (needsSetup || !storedPath) {
-        showSetup();
-    } else {
-        showLibrary();
+    // Check token configuration on page load
+    async function checkConfig() {
+        try {
+            const response = await fetch('/api/config');
+            const config = await response.json();
+
+            if (!config.token_configured) {
+                showTokenError();
+                return;
+            }
+
+            // Token is configured, proceed with normal flow
+            if (needsSetup || !storedPath) {
+                showSetup();
+            } else {
+                showLibrary();
+            }
+        } catch (error) {
+            // If we can't check config, show setup and let user try
+            console.error('Failed to check config:', error);
+            if (needsSetup || !storedPath) {
+                showSetup();
+            } else {
+                showLibrary();
+            }
+        }
     }
+
+    // Initialize by checking config
+    checkConfig();
 
     // Handle form submission
     setupForm.addEventListener('submit', async (e) => {
@@ -265,6 +318,56 @@
     border-radius: 4px;
     margin-bottom: 1rem;
     white-space: pre-wrap;
+}
+
+.token-error-box {
+    max-width: 600px;
+    border-left: 4px solid #e74c3c;
+}
+
+.token-error-box h2 {
+    color: #c0392b;
+}
+
+.token-instructions {
+    background-color: #f8f9fa;
+    padding: 1rem 1.5rem;
+    border-radius: 4px;
+    margin-top: 1rem;
+}
+
+.token-instructions h3 {
+    color: #2c3e50;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+}
+
+.token-instructions ol {
+    margin: 0;
+    padding-left: 1.25rem;
+    color: #34495e;
+}
+
+.token-instructions li {
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+}
+
+.token-instructions code {
+    background-color: #ecf0f1;
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.9em;
+    color: #c0392b;
+}
+
+.token-instructions a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.token-instructions a:hover {
+    text-decoration: underline;
 }
 </style>
 {% endblock %}
