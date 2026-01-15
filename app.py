@@ -1,81 +1,127 @@
 import os
 from flask import Flask, render_template, request, jsonify
 from db import CalibreDB
-from dropbox_sync import DropboxSync
+from dropbox_api import DropboxAPI
 
 app = Flask(__name__)
 
 # Database instance (always uses metadata.db)
 calibre_db = CalibreDB('metadata.db')
 
-# Store Dropbox link in memory (for single-user deployment)
-# In production on Railway, this works fine since it's stateless anyway
-dropbox_link = os.getenv('DROPBOX_SHARED_LINK', None)
+
+def get_library_path():
+    """Get library path from request header."""
+    return request.headers.get('X-Library-Path', '').strip()
 
 
-def ensure_db_synced():
-    """Check if database needs syncing from Dropbox and sync if needed."""
-    if not dropbox_link:
+def get_dropbox_api():
+    """Get DropboxAPI instance. Returns None if not configured."""
+    try:
+        return DropboxAPI()
+    except ValueError:
+        return None
+
+
+def ensure_db_synced(library_path):
+    """Sync database from Dropbox if needed."""
+    if not library_path:
+        return False
+
+    api = get_dropbox_api()
+    if not api:
         return False
 
     try:
-        sync_obj = DropboxSync(dropbox_link)
-        if sync_obj.needs_sync():
-            print("Database is outdated, syncing from Dropbox...")
-            sync_obj.sync()
-            return True
-        else:
-            print("Database is up to date, no sync needed")
-            return False
+        api.sync_metadata_db(library_path)
+        return True
     except Exception as e:
-        print(f"Warning: Could not check/sync database: {e}")
+        print(f"Warning: Could not sync database: {e}")
         return False
 
 
-@app.route('/setup')
-def setup():
-    """Show setup page for configuring Dropbox link."""
-    return render_template('setup.html')
+@app.route('/api/config')
+def api_config():
+    """Return configuration status for the frontend."""
+    api = get_dropbox_api()
+    return jsonify({
+        'token_configured': api is not None,
+    })
 
 
-@app.route('/api/setup', methods=['POST'])
-def api_setup():
-    """Save Dropbox link and test connection."""
-    global dropbox_link
+@app.route('/api/validate-path', methods=['POST'])
+def api_validate_path():
+    """Validate a library path and sync if valid."""
+    api = get_dropbox_api()
+    if not api:
+        return jsonify({
+            'success': False,
+            'error': 'Dropbox access token not configured. Set DROPBOX_ACCESS_TOKEN environment variable.'
+        }), 500
 
-    data = request.json
-    link = data.get('dropbox_link', '').strip()
+    data = request.json or {}
+    library_path = data.get('library_path', '').strip()
 
-    if not link:
-        return jsonify({'success': False, 'error': 'Dropbox link is required'}), 400
+    if not library_path:
+        return jsonify({
+            'success': False,
+            'error': 'Library path is required'
+        }), 400
 
     try:
-        # Test the link by attempting to sync
-        sync = DropboxSync(link)
-        sync.sync()
+        # Validate the path
+        result = api.validate_library_path(library_path)
 
-        # If successful, store the link
-        dropbox_link = link
+        if not result['valid']:
+            return jsonify({
+                'success': False,
+                'error': result['error']
+            }), 400
 
-        return jsonify({'success': True})
+        # Path is valid, sync the database
+        api.sync_metadata_db(library_path)
+
+        return jsonify({
+            'success': True,
+            'metadata_size': result.get('metadata_size'),
+        })
+
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 400
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 
 @app.route('/')
 def index():
     """Display all books in the library."""
-    # Check if database exists
-    if not os.path.exists('metadata.db') or os.path.getsize('metadata.db') == 0:
-        # Redirect to setup if no database
-        return render_template('setup.html')
+    library_path = get_library_path()
 
-    # Sync from Dropbox if needed
-    ensure_db_synced()
+    # Check if database exists and is valid
+    db_exists = os.path.exists('metadata.db') and os.path.getsize('metadata.db') > 0
 
+    # If we have a library path, try to sync
+    if library_path and get_dropbox_api():
+        try:
+            ensure_db_synced(library_path)
+            db_exists = True
+        except Exception as e:
+            print(f"Sync error: {e}")
+
+    # Render page - frontend will handle showing setup if needed
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
     search = request.args.get('search', '')
+
+    if not db_exists:
+        # Return empty page, frontend will show setup
+        return render_template('index.html',
+                             books=[],
+                             page=1,
+                             total_pages=0,
+                             total=0,
+                             search='',
+                             needs_setup=True)
 
     try:
         if search:
@@ -90,17 +136,27 @@ def index():
                              page=page,
                              total_pages=total_pages,
                              total=total,
-                             search=search)
+                             search=search,
+                             needs_setup=False)
     except Exception as e:
-        # If database query fails, show setup page
-        return render_template('setup.html')
+        print(f"Database error: {e}")
+        return render_template('index.html',
+                             books=[],
+                             page=1,
+                             total_pages=0,
+                             total=0,
+                             search='',
+                             needs_setup=True)
 
 
 @app.route('/book/<int:book_id>')
 def book_detail(book_id):
     """Display detailed information about a specific book."""
-    # Sync from Dropbox if needed
-    ensure_db_synced()
+    library_path = get_library_path()
+
+    # Try to sync if we have a path
+    if library_path:
+        ensure_db_synced(library_path)
 
     book = calibre_db.get_book_detail(book_id)
     if not book:
@@ -112,24 +168,29 @@ def book_detail(book_id):
 @app.route('/api/sync', methods=['POST'])
 def sync():
     """Trigger a sync with Dropbox."""
-    global dropbox_link
+    api = get_dropbox_api()
+    if not api:
+        return jsonify({
+            'success': False,
+            'error': 'Dropbox access token not configured'
+        }), 500
 
-    # Accept link from request body or use stored link
     data = request.json or {}
-    link = data.get('dropbox_link', dropbox_link)
+    library_path = data.get('library_path') or get_library_path()
 
-    if not link:
-        return jsonify({'success': False, 'error': 'No Dropbox link configured'}), 400
+    if not library_path:
+        return jsonify({
+            'success': False,
+            'error': 'No library path provided'
+        }), 400
 
     try:
-        sync_obj = DropboxSync(link)
-        sync_obj.sync()
-
-        # Update stored link if provided
-        if data.get('dropbox_link'):
-            dropbox_link = link
-
-        return jsonify({'success': True, 'message': 'Database synced successfully'})
+        result = api.sync_metadata_db(library_path)
+        return jsonify({
+            'success': True,
+            'message': 'Database synced successfully',
+            'size': result['size']
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -156,19 +217,5 @@ def series():
 
 
 if __name__ == '__main__':
-    # Sync database before starting if env var is set
-    if dropbox_link:
-        try:
-            sync_obj = DropboxSync(dropbox_link)
-            if sync_obj.needs_sync():
-                sync_obj.sync()
-                print("Database synced successfully on startup")
-            else:
-                print("Database is up to date on startup")
-        except Exception as e:
-            print(f"Warning: Could not sync database: {e}")
-    else:
-        print("No Dropbox link configured. Visit /setup to configure.")
-
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=os.getenv('FLASK_DEBUG', 'False') == 'True')
