@@ -58,9 +58,11 @@ class DropboxAPI:
 
             if response.status_code == 401:
                 raise Exception(
-                    "Dropbox access token is invalid or expired. "
-                    "Please generate a new token at https://www.dropbox.com/developers/apps "
-                    "and update the DROPBOX_ACCESS_TOKEN environment variable."
+                    "Dropbox authentication failed. Please check:\n"
+                    "1. Token was copied correctly (no extra spaces or missing characters)\n"
+                    "2. App has 'files.metadata.read' and 'files.content.read' permissions\n"
+                    "3. App uses 'Full Dropbox' access (not 'App folder')\n"
+                    "Generate a new token at https://www.dropbox.com/developers/apps"
                 )
 
             if response.status_code == 409:
@@ -96,9 +98,11 @@ class DropboxAPI:
 
             if response.status_code == 401:
                 raise Exception(
-                    "Dropbox access token is invalid or expired. "
-                    "Please generate a new token at https://www.dropbox.com/developers/apps "
-                    "and update the DROPBOX_ACCESS_TOKEN environment variable."
+                    "Dropbox authentication failed. Please check:\n"
+                    "1. Token was copied correctly (no extra spaces or missing characters)\n"
+                    "2. App has 'files.metadata.read' and 'files.content.read' permissions\n"
+                    "3. App uses 'Full Dropbox' access (not 'App folder')\n"
+                    "Generate a new token at https://www.dropbox.com/developers/apps"
                 )
 
             if response.status_code == 409:
@@ -136,9 +140,11 @@ class DropboxAPI:
 
             if response.status_code == 401:
                 raise Exception(
-                    "Dropbox access token is invalid or expired. "
-                    "Please generate a new token at https://www.dropbox.com/developers/apps "
-                    "and update the DROPBOX_ACCESS_TOKEN environment variable."
+                    "Dropbox authentication failed. Please check:\n"
+                    "1. Token was copied correctly (no extra spaces or missing characters)\n"
+                    "2. App has 'files.metadata.read' and 'files.content.read' permissions\n"
+                    "3. App uses 'Full Dropbox' access (not 'App folder')\n"
+                    "Generate a new token at https://www.dropbox.com/developers/apps"
                 )
 
             if response.status_code == 409:
