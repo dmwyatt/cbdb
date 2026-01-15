@@ -35,6 +35,33 @@
         .status-bar .badge.error {
             background: #e74c3c;
         }
+        .status-bar .badge.offline {
+            background: #9b59b6;
+        }
+        .status-bar .badge.cached {
+            background: #3498db;
+        }
+        .status-bar .actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .status-bar .refresh-btn {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .status-bar .refresh-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        .status-bar .refresh-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -205,10 +232,12 @@
     <div id="statusBar" class="status-bar" style="display: none;">
         <div class="status-text">
             <span id="statusBadge" class="badge">Ready</span>
+            <span id="sourceBadge" class="badge cached" style="display: none;">Cached</span>
             <span id="statusMessage">Database loaded</span>
         </div>
-        <div class="perf-stats">
-            <span id="perfStats"></span>
+        <div class="actions">
+            <span id="perfStats" class="perf-stats"></span>
+            <button id="refreshBtn" class="refresh-btn" onclick="refreshDatabase()">Refresh</button>
         </div>
     </div>
 
@@ -287,9 +316,21 @@
     let perPage = 20;
     let currentSearch = '';
     let totalBooks = 0;
+    let loadedFromCache = false;
+    let isOffline = !navigator.onLine;
 
     const LIBRARY_PATH_KEY = 'calibreLibraryPath';
     const DB_CACHE_KEY = 'calibreMetadataDB';
+
+    // Track online/offline status
+    window.addEventListener('online', () => {
+        isOffline = false;
+        updateSourceBadge();
+    });
+    window.addEventListener('offline', () => {
+        isOffline = true;
+        updateSourceBadge();
+    });
 
     // DOM elements
     const setupSection = document.getElementById('setupSection');
@@ -301,7 +342,9 @@
     const searchInput = document.getElementById('searchInput');
     const statusBar = document.getElementById('statusBar');
     const statusBadge = document.getElementById('statusBadge');
+    const sourceBadge = document.getElementById('sourceBadge');
     const statusMessage = document.getElementById('statusMessage');
+    const refreshBtn = document.getElementById('refreshBtn');
     const setupError = document.getElementById('setupError');
     const setupButton = document.getElementById('setupButton');
     const libraryPathInput = document.getElementById('libraryPath');
@@ -352,28 +395,50 @@
         renderBooks();
     });
 
-    async function loadDatabase(libraryPath) {
+    async function loadDatabase(libraryPath, forceRefresh = false) {
         showLoading('Initializing sql.js...');
         setProgress(10);
+        loadedFromCache = false;
 
         try {
             // Initialize sql.js
             if (!SQL) {
-                SQL = await initSqlJs({
-                    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`
-                });
+                try {
+                    SQL = await initSqlJs({
+                        locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`
+                    });
+                } catch (sqlError) {
+                    throw new Error('Failed to load SQLite engine. Please check your internet connection and try again.');
+                }
             }
             setProgress(30);
 
-            // Try to load from IndexedDB cache first
-            showLoading('Checking cache...');
-            let dbData = await loadFromCache();
+            let dbData = null;
 
-            if (dbData) {
-                showLoading('Loading from cache...');
-                setProgress(70);
-            } else {
+            // Try to load from IndexedDB cache first (unless forcing refresh)
+            if (!forceRefresh) {
+                showLoading('Checking cache...');
+                try {
+                    dbData = await loadFromCache();
+                    if (dbData) {
+                        loadedFromCache = true;
+                        showLoading('Loading from cache...');
+                        setProgress(70);
+                    }
+                } catch (cacheError) {
+                    console.warn('Cache read failed, will download fresh:', cacheError);
+                    // Cache might be corrupted, clear it
+                    await clearCache();
+                    dbData = null;
+                }
+            }
+
+            if (!dbData) {
                 // Download from server
+                if (isOffline) {
+                    throw new Error('You are offline and no cached database is available. Please connect to the internet and try again.');
+                }
+
                 showLoading('Downloading database from Dropbox...');
                 setProgress(40);
 
@@ -384,8 +449,14 @@
                 });
 
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.error || 'Failed to download database');
+                    let errorMsg = 'Failed to download database';
+                    try {
+                        const error = await response.json();
+                        errorMsg = error.error || errorMsg;
+                    } catch (e) {
+                        // Response wasn't JSON
+                    }
+                    throw new Error(errorMsg);
                 }
 
                 setProgress(60);
@@ -397,14 +468,33 @@
                 // Cache in IndexedDB
                 setProgress(80);
                 showLoading('Caching for offline use...');
-                await saveToCache(dbData);
+                try {
+                    await saveToCache(dbData);
+                } catch (cacheError) {
+                    console.warn('Failed to cache database:', cacheError);
+                    // Continue anyway, just won't have offline support
+                }
             }
 
             setProgress(90);
             showLoading('Opening database...');
 
-            // Create database from data
-            db = new SQL.Database(dbData);
+            // Try to create database, with error recovery
+            try {
+                db = new SQL.Database(dbData);
+                // Verify database is valid by running a simple query
+                db.exec("SELECT COUNT(*) FROM books");
+            } catch (dbError) {
+                console.error('Database appears corrupted:', dbError);
+                if (loadedFromCache) {
+                    // Cache was corrupted, clear it and retry
+                    await clearCache();
+                    hideLoading();
+                    showLoading('Cache was corrupted, downloading fresh copy...');
+                    return loadDatabase(libraryPath, true);
+                }
+                throw new Error('Downloaded database appears to be corrupted. Please try again.');
+            }
 
             setProgress(100);
             hideLoading();
@@ -416,6 +506,7 @@
             statusBar.style.display = 'flex';
 
             updateStatus('Ready', `Database loaded (${formatBytes(dbData.length)})`, 'ready');
+            updateSourceBadge();
 
             // Render books
             renderBooks();
@@ -426,6 +517,48 @@
             showSetupError(error.message);
             setupSection.style.display = 'block';
             librarySection.style.display = 'none';
+            searchForm.style.display = 'none';
+            statusBar.style.display = 'none';
+        }
+    }
+
+    async function refreshDatabase() {
+        const libraryPath = localStorage.getItem(LIBRARY_PATH_KEY);
+        if (!libraryPath) return;
+
+        if (isOffline) {
+            alert('Cannot refresh while offline. Please connect to the internet and try again.');
+            return;
+        }
+
+        refreshBtn.disabled = true;
+        refreshBtn.textContent = 'Refreshing...';
+
+        try {
+            await clearCache();
+            await loadDatabase(libraryPath, true);
+        } finally {
+            refreshBtn.disabled = false;
+            refreshBtn.textContent = 'Refresh';
+        }
+    }
+
+    function updateSourceBadge() {
+        if (isOffline) {
+            sourceBadge.textContent = 'Offline';
+            sourceBadge.className = 'badge offline';
+            sourceBadge.style.display = 'inline';
+            refreshBtn.disabled = true;
+        } else if (loadedFromCache) {
+            sourceBadge.textContent = 'Cached';
+            sourceBadge.className = 'badge cached';
+            sourceBadge.style.display = 'inline';
+            refreshBtn.disabled = false;
+        } else {
+            sourceBadge.textContent = 'Fresh';
+            sourceBadge.className = 'badge';
+            sourceBadge.style.display = 'inline';
+            refreshBtn.disabled = false;
         }
     }
 
