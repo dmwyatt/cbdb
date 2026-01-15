@@ -1,7 +1,13 @@
-# Let nixpacks auto-detect Python, just add Node.js for frontend build
+# Include both Python and Node.js explicitly
 [phases.setup]
-nixPkgs = ["nodejs_20"]
+nixPkgs = ["python311", "nodejs_20"]
+aptPkgs = ["..."]
+
+[phases.install]
+cmds = ["python3.11 -m venv /opt/venv", ". /opt/venv/bin/activate && pip install -r requirements.txt", "cd frontend && npm ci"]
 
 [phases.build]
-dependsOn = ["install"]
-cmds = ["cd frontend && npm ci && npm run build"]
+cmds = ["cd frontend && npm run build"]
+
+[start]
+cmd = ". /opt/venv/bin/activate && gunicorn --timeout 120 app:app"
