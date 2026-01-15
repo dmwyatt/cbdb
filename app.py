@@ -128,6 +128,58 @@ def download_db():
         }), 500
 
 
+@app.route('/api/download-link')
+def download_link():
+    """
+    Get a temporary download link for a book file.
+    Returns a Dropbox temporary link that can be used for direct download.
+    """
+    api = get_dropbox_api()
+    if not api:
+        return jsonify({
+            'success': False,
+            'error': 'Dropbox access token not configured'
+        }), 500
+
+    library_path = get_library_path()
+    if not library_path:
+        return jsonify({
+            'success': False,
+            'error': 'No library path provided. Set X-Library-Path header.'
+        }), 400
+
+    # Get file path from query parameter
+    file_path = request.args.get('path', '').strip()
+    if not file_path:
+        return jsonify({
+            'success': False,
+            'error': 'No file path provided. Set path query parameter.'
+        }), 400
+
+    try:
+        # Normalize library path
+        if not library_path.startswith("/"):
+            library_path = "/" + library_path
+        library_path = library_path.rstrip("/")
+
+        # Build full path: library_path + book_path + filename
+        full_path = f"{library_path}/{file_path}"
+
+        # Get temporary link from Dropbox
+        link = api.get_temporary_link(full_path)
+
+        return jsonify({
+            'success': True,
+            'link': link
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=os.getenv('FLASK_DEBUG', 'False') == 'True')

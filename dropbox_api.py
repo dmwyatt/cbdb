@@ -248,6 +248,51 @@ class DropboxAPI:
             "metadata_modified": metadata.get("server_modified"),
         }
 
+    def get_temporary_link(self, path):
+        """
+        Get a temporary direct download link for a file.
+
+        The link is valid for approximately 4 hours.
+
+        Args:
+            path: Path to file in Dropbox (e.g., "/Calibre Library/Author/Book (1)/book.epub")
+
+        Returns:
+            str: Temporary download URL
+        """
+        try:
+            response = requests.post(
+                f"{self.BASE_URL}/files/get_temporary_link",
+                headers=self._headers(),
+                json={"path": path},
+                timeout=30,
+            )
+
+            if response.status_code == 401:
+                raise Exception(
+                    "Dropbox authentication failed. Please check:\n"
+                    "1. Token was copied correctly (no extra spaces or missing characters)\n"
+                    "2. App has 'files.metadata.read' and 'files.content.read' permissions\n"
+                    "3. App uses 'Full Dropbox' access (not 'App folder')\n"
+                    "Generate a new token at https://www.dropbox.com/developers/apps"
+                )
+
+            if response.status_code == 409:
+                error_data = response.json()
+                error_tag = error_data.get("error", {}).get(".tag")
+                if error_tag == "path":
+                    path_error = error_data.get("error", {}).get("path", {}).get(".tag")
+                    if path_error == "not_found":
+                        raise Exception(f"File not found: {path}")
+                    elif path_error == "not_file":
+                        raise Exception(f"Path is not a file: {path}")
+
+            response.raise_for_status()
+            return response.json().get("link")
+
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Failed to get download link: {str(e)}")
+
     def sync_metadata_db(self, library_path, local_path="metadata.db"):
         """
         Download metadata.db from the library path.

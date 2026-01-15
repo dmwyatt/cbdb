@@ -211,6 +211,36 @@
             font-size: 0.75rem;
             color: #95a5a6;
         }
+        /* Download Button */
+        .download-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.5rem 0.75rem;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .download-btn:hover {
+            background: #219a52;
+        }
+        .download-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        .download-btn .download-icon {
+            font-size: 1rem;
+            font-weight: bold;
+        }
+        .download-btn .download-size {
+            font-size: 0.75rem;
+            opacity: 0.85;
+        }
         /* View Toggle */
         .view-toggle {
             display: flex;
@@ -945,12 +975,12 @@
         `);
         book.tags = tagsResult.length ? tagsResult[0].values.map(r => r[0]) : [];
 
-        // Get formats
+        // Get formats (including filename for download)
         const formatsResult = db.exec(`
-            SELECT format, uncompressed_size FROM data
+            SELECT format, uncompressed_size, name FROM data
             WHERE book = ${bookId}
         `);
-        book.formats = formatsResult.length ? formatsResult[0].values.map(r => ({ format: r[0], size: r[1] })) : [];
+        book.formats = formatsResult.length ? formatsResult[0].values.map(r => ({ format: r[0], size: r[1], name: r[2] })) : [];
 
         // Get identifiers
         const identifiersResult = db.exec(`
@@ -990,7 +1020,15 @@
                 ${book.formats.length ? `
                     <div class="detail-formats" style="margin: 1rem 0;">
                         <strong>Formats:</strong>
-                        ${book.formats.map(f => `<span class="format-badge">${f.format}</span>`).join('')}
+                        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;">
+                            ${book.formats.map(f => `
+                                <button class="download-btn" data-path="${escapeAttr(book.path)}" data-name="${escapeAttr(f.name)}" data-format="${f.format}" onclick="downloadBook(this.dataset.path, this.dataset.name, this.dataset.format)" title="Download ${f.format} (${formatBytes(f.size)})">
+                                    <span class="download-icon">&#8595;</span>
+                                    ${f.format}
+                                    <span class="download-size">${formatBytes(f.size)}</span>
+                                </button>
+                            `).join('')}
+                        </div>
                     </div>
                 ` : ''}
 
@@ -1152,6 +1190,15 @@
         return div.innerHTML;
     }
 
+    function escapeAttr(text) {
+        if (!text) return '';
+        return text.replace(/&/g, '&amp;')
+                   .replace(/"/g, '&quot;')
+                   .replace(/'/g, '&#39;')
+                   .replace(/</g, '&lt;')
+                   .replace(/>/g, '&gt;');
+    }
+
     function renderStars(rating) {
         const stars = Math.floor((rating || 0) / 2);
         return '&#9733;'.repeat(stars) + '&#9734;'.repeat(5 - stars);
@@ -1187,6 +1234,55 @@
         setupError.style.display = 'block';
         setupButton.disabled = false;
         setupButton.textContent = 'Load Library';
+    }
+
+    async function downloadBook(bookPath, fileName, format) {
+        const libraryPath = localStorage.getItem(LIBRARY_PATH_KEY);
+        if (!libraryPath) {
+            alert('Library path not configured');
+            return;
+        }
+
+        // Build the file path: bookPath/fileName.format
+        const filePath = `${bookPath}/${fileName}.${format.toLowerCase()}`;
+
+        // Find the button that was clicked and show loading state
+        const buttons = document.querySelectorAll('.download-btn');
+        let clickedButton = null;
+        buttons.forEach(btn => {
+            if (btn.textContent.includes(format)) {
+                clickedButton = btn;
+                btn.disabled = true;
+                btn.querySelector('.download-icon').textContent = '...';
+            }
+        });
+
+        try {
+            const response = await fetch(`/api/download-link?path=${encodeURIComponent(filePath)}`, {
+                headers: {
+                    'X-Library-Path': libraryPath
+                }
+            });
+
+            const data = await response.json();
+
+            if (!data.success) {
+                throw new Error(data.error || 'Failed to get download link');
+            }
+
+            // Open the download link in a new tab/window
+            window.open(data.link, '_blank');
+
+        } catch (error) {
+            console.error('Download failed:', error);
+            alert('Download failed: ' + error.message);
+        } finally {
+            // Restore button state
+            if (clickedButton) {
+                clickedButton.disabled = false;
+                clickedButton.querySelector('.download-icon').textContent = '↓';
+            }
+        }
     }
     </script>
 </body>
