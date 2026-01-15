@@ -56,6 +56,13 @@ class DropboxAPI:
                 timeout=10,
             )
 
+            if response.status_code == 401:
+                raise Exception(
+                    "Dropbox access token is invalid or expired. "
+                    "Please generate a new token at https://www.dropbox.com/developers/apps "
+                    "and update the DROPBOX_ACCESS_TOKEN environment variable."
+                )
+
             if response.status_code == 409:
                 # Path not found
                 error_data = response.json()
@@ -86,6 +93,13 @@ class DropboxAPI:
                 json={"path": path},
                 timeout=30,
             )
+
+            if response.status_code == 401:
+                raise Exception(
+                    "Dropbox access token is invalid or expired. "
+                    "Please generate a new token at https://www.dropbox.com/developers/apps "
+                    "and update the DROPBOX_ACCESS_TOKEN environment variable."
+                )
 
             if response.status_code == 409:
                 error_data = response.json()
@@ -119,6 +133,13 @@ class DropboxAPI:
                 headers=self._content_headers({"path": path}),
                 timeout=120,
             )
+
+            if response.status_code == 401:
+                raise Exception(
+                    "Dropbox access token is invalid or expired. "
+                    "Please generate a new token at https://www.dropbox.com/developers/apps "
+                    "and update the DROPBOX_ACCESS_TOKEN environment variable."
+                )
 
             if response.status_code == 409:
                 error_data = response.json()
