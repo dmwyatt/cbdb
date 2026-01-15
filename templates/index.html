@@ -3,66 +3,268 @@
 {% block title %}Calibre Library{% if search %} - Search: {{ search }}{% endif %}{% endblock %}
 
 {% block content %}
-<div class="library-header">
-    <h2>
-        {% if search %}
-            Search Results for "{{ search }}"
-        {% else %}
-            All Books
-        {% endif %}
-    </h2>
-    <p class="book-count">{{ total }} book{% if total != 1 %}s{% endif %} found</p>
-</div>
+<!-- Setup form shown when no library path configured -->
+<div id="setupSection" style="display: none;">
+    <div class="setup-inline">
+        <h2>Configure Calibre Library</h2>
+        <p>Enter the path to your Calibre Library folder in Dropbox.</p>
 
-{% if books %}
-<div class="books-grid">
-    {% for book in books %}
-    <div class="book-card">
-        <a href="{{ url_for('book_detail', book_id=book.id) }}" class="book-link">
-            <div class="book-cover placeholder-cover">
-                <span>📚</span>
+        <div id="setupError" class="error-message" style="display: none;"></div>
+
+        <form id="setupForm" class="setup-form-inline">
+            <div class="form-group">
+                <label for="libraryPath">Calibre Library Path</label>
+                <input
+                    type="text"
+                    id="libraryPath"
+                    name="libraryPath"
+                    placeholder="/Calibre Library"
+                    required
+                >
+                <small>The folder path in Dropbox containing your Calibre library (with metadata.db)</small>
             </div>
-            <div class="book-info">
-                <h3 class="book-title">{{ book.title }}</h3>
-                {% if book.authors %}
-                <p class="book-author">{{ book.authors }}</p>
-                {% endif %}
-                {% if book.series %}
-                <p class="book-series">{{ book.series }}{% if book.series_index %} #{{ book.series_index }}{% endif %}</p>
-                {% endif %}
-                {% if book.rating %}
-                <div class="book-rating">
-                    {% set stars = (book.rating / 2) | int %}
-                    {% for i in range(stars) %}★{% endfor %}
-                    {% for i in range(5 - stars) %}☆{% endfor %}
-                </div>
-                {% endif %}
-            </div>
-        </a>
+            <button type="submit" class="setup-button" id="setupButton">
+                Connect Library
+            </button>
+        </form>
     </div>
-    {% endfor %}
 </div>
 
-{% if total_pages > 1 %}
-<div class="pagination">
-    {% if page > 1 %}
-    <a href="?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}" class="pagination-link">&laquo; Previous</a>
+<!-- Library content shown when configured -->
+<div id="librarySection" {% if needs_setup %}style="display: none;"{% endif %}>
+    <div class="library-header">
+        <h2>
+            {% if search %}
+                Search Results for "{{ search }}"
+            {% else %}
+                All Books
+            {% endif %}
+        </h2>
+        <p class="book-count">{{ total }} book{% if total != 1 %}s{% endif %} found</p>
+    </div>
+
+    {% if books %}
+    <div class="books-grid">
+        {% for book in books %}
+        <div class="book-card">
+            <a href="{{ url_for('book_detail', book_id=book.id) }}" class="book-link">
+                <div class="book-cover placeholder-cover">
+                    <span>📚</span>
+                </div>
+                <div class="book-info">
+                    <h3 class="book-title">{{ book.title }}</h3>
+                    {% if book.authors %}
+                    <p class="book-author">{{ book.authors }}</p>
+                    {% endif %}
+                    {% if book.series %}
+                    <p class="book-series">{{ book.series }}{% if book.series_index %} #{{ book.series_index }}{% endif %}</p>
+                    {% endif %}
+                    {% if book.rating %}
+                    <div class="book-rating">
+                        {% set stars = (book.rating / 2) | int %}
+                        {% for i in range(stars) %}★{% endfor %}
+                        {% for i in range(5 - stars) %}☆{% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="?page={{ page - 1 }}{% if search %}&search={{ search }}{% endif %}" class="pagination-link">&laquo; Previous</a>
+        {% endif %}
+
+        <span class="pagination-info">Page {{ page }} of {{ total_pages }}</span>
+
+        {% if page < total_pages %}
+        <a href="?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}" class="pagination-link">Next &raquo;</a>
+        {% endif %}
+    </div>
     {% endif %}
 
-    <span class="pagination-info">Page {{ page }} of {{ total_pages }}</span>
-
-    {% if page < total_pages %}
-    <a href="?page={{ page + 1 }}{% if search %}&search={{ search }}{% endif %}" class="pagination-link">Next &raquo;</a>
+    {% else %}
+    <div class="no-results">
+        <p>No books found{% if search %} for "{{ search }}"{% endif %}.</p>
+        {% if search %}
+        <a href="/" class="button">View All Books</a>
+        {% endif %}
+    </div>
     {% endif %}
 </div>
-{% endif %}
 
-{% else %}
-<div class="no-results">
-    <p>No books found{% if search %} for "{{ search }}"{% endif %}.</p>
-    {% if search %}
-    <a href="/" class="button">View All Books</a>
-    {% endif %}
-</div>
-{% endif %}
+<script>
+(function() {
+    const LIBRARY_PATH_KEY = 'calibreLibraryPath';
+    const needsSetup = {{ 'true' if needs_setup else 'false' }};
+
+    const setupSection = document.getElementById('setupSection');
+    const librarySection = document.getElementById('librarySection');
+    const setupForm = document.getElementById('setupForm');
+    const setupButton = document.getElementById('setupButton');
+    const setupError = document.getElementById('setupError');
+    const libraryPathInput = document.getElementById('libraryPath');
+
+    // Get stored library path
+    const storedPath = localStorage.getItem(LIBRARY_PATH_KEY);
+
+    // Determine if we need to show setup
+    function showSetup() {
+        setupSection.style.display = 'block';
+        librarySection.style.display = 'none';
+        if (storedPath) {
+            libraryPathInput.value = storedPath;
+        }
+    }
+
+    function showLibrary() {
+        setupSection.style.display = 'none';
+        librarySection.style.display = 'block';
+    }
+
+    function showError(message) {
+        setupError.textContent = message;
+        setupError.style.display = 'block';
+    }
+
+    function hideError() {
+        setupError.style.display = 'none';
+    }
+
+    // Check if setup is needed
+    if (needsSetup || !storedPath) {
+        showSetup();
+    } else {
+        showLibrary();
+    }
+
+    // Handle form submission
+    setupForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideError();
+
+        const libraryPath = libraryPathInput.value.trim();
+        if (!libraryPath) {
+            showError('Library path is required');
+            return;
+        }
+
+        setupButton.disabled = true;
+        setupButton.textContent = 'Connecting...';
+
+        try {
+            const response = await fetch('/api/validate-path', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ library_path: libraryPath }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Save to localStorage
+                localStorage.setItem(LIBRARY_PATH_KEY, libraryPath);
+                // Reload page to show library
+                window.location.reload();
+            } else {
+                showError(data.error || 'Failed to connect to library');
+                setupButton.disabled = false;
+                setupButton.textContent = 'Connect Library';
+            }
+        } catch (error) {
+            showError('Failed to connect. Please try again.');
+            setupButton.disabled = false;
+            setupButton.textContent = 'Connect Library';
+        }
+    });
+})();
+</script>
+
+<style>
+.setup-inline {
+    max-width: 500px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.setup-inline h2 {
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.setup-inline p {
+    color: #7f8c8d;
+    margin-bottom: 1.5rem;
+}
+
+.setup-form-inline .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.setup-form-inline label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+.setup-form-inline input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #ecf0f1;
+    border-radius: 4px;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.setup-form-inline input:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+.setup-form-inline small {
+    display: block;
+    margin-top: 0.5rem;
+    color: #7f8c8d;
+    font-size: 0.85rem;
+}
+
+.setup-button {
+    width: 100%;
+    padding: 1rem;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.setup-button:hover {
+    background-color: #2980b9;
+}
+
+.setup-button:disabled {
+    background-color: #95a5a6;
+    cursor: not-allowed;
+}
+
+.error-message {
+    background-color: #fee;
+    color: #c00;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    white-space: pre-wrap;
+}
+</style>
 {% endblock %}
