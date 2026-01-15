@@ -1,0 +1,39 @@
+import { useEffect } from 'react';
+import { Header } from '@/components/layout/Header';
+import { Footer } from '@/components/layout/Footer';
+import { SetupForm } from '@/components/setup/SetupForm';
+import { Library } from '@/components/books/Library';
+import { LoadingOverlay } from '@/components/common/LoadingOverlay';
+import { useLibraryStore } from '@/store/libraryStore';
+
+function App() {
+  const { db, libraryPath, isLoading, loadingMessage, loadingProgress, loadDatabase } =
+    useLibraryStore();
+
+  // Auto-load database if we have a saved library path
+  useEffect(() => {
+    if (libraryPath && !db && !isLoading) {
+      loadDatabase();
+    }
+  }, [libraryPath, db, isLoading, loadDatabase]);
+
+  const showSetup = !db && !isLoading;
+  const showLibrary = db !== null;
+
+  return (
+    <div className="min-h-screen flex flex-col bg-slate-50">
+      <Header />
+
+      {isLoading && (
+        <LoadingOverlay message={loadingMessage} progress={loadingProgress} />
+      )}
+
+      {showSetup && <SetupForm />}
+      {showLibrary && <Library />}
+
+      <Footer />
+    </div>
+  );
+}
+
+export default App;

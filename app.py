@@ -1,8 +1,9 @@
 import os
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, send_from_directory
 from dropbox_api import DropboxAPI
 
-app = Flask(__name__)
+# Serve React build from frontend/dist
+app = Flask(__name__, static_folder='frontend/dist', static_url_path='')
 
 
 def get_library_path():
@@ -20,8 +21,8 @@ def get_dropbox_api():
 
 @app.route('/')
 def index():
-    """Serve the WASM SQLite browser."""
-    return render_template('index.html')
+    """Serve the React app."""
+    return send_from_directory(app.static_folder, 'index.html')
 
 
 @app.route('/api/config')

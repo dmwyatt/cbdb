@@ -1,0 +1,131 @@
+import { useEffect, useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { StarRating } from '@/components/common/StarRating';
+import { DownloadButton } from './DownloadButton';
+import { useLibraryStore } from '@/store/libraryStore';
+import { getBookDetail } from '@/lib/sql';
+import type { BookDetail } from '@/types/book';
+
+export function BookModal() {
+  const { db, selectedBookId, setSelectedBookId } = useLibraryStore();
+  const [book, setBook] = useState<BookDetail | null>(null);
+  const [queryTime, setQueryTime] = useState<number>(0);
+
+  useEffect(() => {
+    if (!db || selectedBookId === null) {
+      setBook(null);
+      return;
+    }
+
+    const startTime = performance.now();
+    const detail = getBookDetail(db, selectedBookId);
+    setQueryTime(performance.now() - startTime);
+    setBook(detail);
+  }, [db, selectedBookId]);
+
+  const handleClose = () => {
+    setSelectedBookId(null);
+  };
+
+  return (
+    <Dialog open={selectedBookId !== null} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        {book && (
+          <>
+            <DialogHeader>
+              <DialogTitle className="text-2xl">{book.title}</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 mt-4">
+              {book.authors.length > 0 && (
+                <p>
+                  <strong>Authors:</strong> {book.authors.join(', ')}
+                </p>
+              )}
+
+              {book.series && (
+                <p>
+                  <strong>Series:</strong> {book.series}
+                  {book.series_index ? ` #${book.series_index}` : ''}
+                </p>
+              )}
+
+              {book.rating && (
+                <div>
+                  <StarRating rating={book.rating} className="text-lg" />
+                </div>
+              )}
+
+              {book.publisher && (
+                <p>
+                  <strong>Publisher:</strong> {book.publisher}
+                </p>
+              )}
+
+              {book.pubdate && (
+                <p>
+                  <strong>Published:</strong>{' '}
+                  {new Date(book.pubdate).toLocaleDateString()}
+                </p>
+              )}
+
+              {book.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {book.tags.map((tag) => (
+                    <Badge key={tag} variant="secondary">
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+
+              {book.formats.length > 0 && (
+                <div>
+                  <strong>Formats:</strong>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {book.formats.map((format) => (
+                      <DownloadButton
+                        key={format.format}
+                        format={format}
+                        bookPath={book.path}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {book.comments && (
+                <div>
+                  <strong>Description:</strong>
+                  <div
+                    className="mt-2 prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: book.comments }}
+                  />
+                </div>
+              )}
+
+              {Object.keys(book.identifiers).length > 0 && (
+                <div>
+                  <strong>Identifiers:</strong>{' '}
+                  {Object.entries(book.identifiers)
+                    .map(([k, v]) => `${k.toUpperCase()}: ${v}`)
+                    .join(' | ')}
+                </div>
+              )}
+
+              <p className="text-xs text-gray-400 mt-4">
+                Query time: {queryTime.toFixed(1)}ms
+              </p>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
