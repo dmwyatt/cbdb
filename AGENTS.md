@@ -107,6 +107,8 @@ log.error(LogCategory.DATABASE, 'Validation failed', error);
 
 **Available log categories:** `COVER`, `CACHE`, `QUERY`, `DATABASE`, `NETWORK`
 
+New categories can be added to `LogCategory` in `logger.ts`, but avoid category explosion - too many categories defeats the purpose of filtering. Prefer reusing existing categories when reasonable.
+
 **Utility:**
 ```typescript
 import { getErrorMessage } from '@/lib/utils';
@@ -117,7 +119,7 @@ const message = getErrorMessage(error, 'fallback message');
 
 **When to use:**
 - `showGlobalError()`: User needs to know (download failed, offline, validation errors)
-- `logWarn()`/`logError()`: Debug logging (cover fetch, cache, query failures)
+- `log.warn()`/`log.error()`: Debug logging (cover fetch, cache, query failures)
 
 ## Security Requirements
 
