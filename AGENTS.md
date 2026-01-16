@@ -55,10 +55,12 @@ frontend/               # React + TypeScript + Vite app
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
+| `/health` | GET | Health check |
 | `/api/config` | GET | Check if Dropbox token is configured |
 | `/api/validate-path` | POST | Verify library path exists in Dropbox |
 | `/api/download-db` | GET | Download metadata.db (uses `X-Library-Path` header) |
 | `/api/download-link` | GET | Get temporary download link for book file |
+| `/api/covers` | POST | Get batch thumbnails for book covers |
 
 ## Code Style
 
@@ -128,32 +130,46 @@ No automated test framework yet. Manual testing areas:
 
 ## Documentation
 
+README.md is user-facing documentation. AGENTS.md is for AI agents and developers working on the codebase.
+
 ### Keeping README.md Up to Date
 
-Update `README.md` when making significant changes to the codebase. The README is user-facing documentation and should accurately reflect the current state of the project.
+Update `README.md` when changes affect end users:
 
 **Update README.md when:**
-- Adding, removing, or changing API endpoints
-- Modifying the project structure (new directories, renamed files)
-- Changing the tech stack (new dependencies, frameworks, or tools)
+- Adding new user-facing features
+- Changing the setup or deployment process
+- Modifying environment variables
 - Altering the build process or development workflow
-- Adding new features that users should know about
-- Changing environment variables or configuration options
+
+**What to update:**
+- Features list
+- Setup instructions
+- Environment Variables table
+- Local Development instructions
+- Troubleshooting section (if relevant)
+
+**Do not update README.md for:**
+- API endpoint changes (internal implementation detail)
+- Internal refactoring
+- Bug fixes that don't affect usage
+- Code style or dependency updates
+
+### Keeping AGENTS.md Up to Date
+
+Update `AGENTS.md` when changes affect how agents/developers work with the code:
+
+**Update AGENTS.md when:**
+- Adding, removing, or changing API endpoints
+- Modifying project structure
+- Changing code style conventions
+- Adding new common tasks or workflows
 
 **What to update:**
 - API Endpoints table
 - Project Structure tree
-- Tech Stack section
-- Local Development instructions
-- Environment Variables table
-- Features list
-- Troubleshooting section (if relevant)
-
-**Do not update README.md for:**
-- Internal refactoring that doesn't change external behavior
-- Bug fixes that don't affect usage
-- Minor dependency updates
-- Code style changes
+- Code Style guidelines
+- Common Tasks section
 
 ## Architecture Notes
 

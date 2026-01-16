@@ -132,18 +132,6 @@ cbdb/
     └── vite.config.ts
 ```
 
-## API Endpoints
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/health` | GET | Health check |
-| `/` | GET | Serve React app |
-| `/api/config` | GET | Check if Dropbox token is configured |
-| `/api/validate-path` | POST | Verify library path exists in Dropbox |
-| `/api/download-db` | GET | Download metadata.db (uses `X-Library-Path` header) |
-| `/api/download-link` | GET | Get temporary download link for book file |
-| `/api/covers` | POST | Get batch thumbnails for book covers |
-
 ## Troubleshooting
 
 ### App shows setup page on every visit
