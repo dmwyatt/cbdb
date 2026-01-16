@@ -1,5 +1,6 @@
 import { fetchCovers } from '@/lib/api';
 import { getCachedCovers, saveCachedCovers } from '@/lib/indexeddb';
+import type { LibraryPath } from '@/types/libraryPath';
 
 const BATCH_SIZE = 25;
 
@@ -9,13 +10,13 @@ const BATCH_SIZE = 25;
  */
 class CoverService {
   private pendingFetches = new Map<string, Promise<string | null>>();
-  private libraryPath: string | null = null;
+  private libraryPath: LibraryPath | null = null;
 
   /**
    * Set the library path for cover fetching.
    * Must be called before fetching covers.
    */
-  setLibraryPath(path: string | null): void {
+  setLibraryPath(path: LibraryPath | null): void {
     if (this.libraryPath !== path) {
       this.libraryPath = path;
       this.pendingFetches.clear();

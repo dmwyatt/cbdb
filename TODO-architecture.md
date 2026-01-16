@@ -69,23 +69,26 @@ Current inconsistency:
 
 ---
 
-## Priority 3: Code Quality
+## Completed
 
 ### Add type safety for library path
 
-**Files**: Throughout - `libraryPath` is a plain string everywhere
+**Files**: `frontend/src/types/libraryPath.ts`, `frontend/src/store/libraryStore.ts`, `frontend/src/lib/api.ts`, `frontend/src/lib/indexeddb.ts`, `frontend/src/lib/coverService.ts`
 
-**Solution**: Consider branded type or wrapper:
-```typescript
-type LibraryPath = string & { readonly brand: unique symbol };
-function createLibraryPath(path: string): LibraryPath;
-```
+Created `frontend/src/types/libraryPath.ts` with a branded type system:
+- `LibraryPath` branded type that prevents accidental use of arbitrary strings
+- `createLibraryPath(path)` - validates and normalizes path (ensures leading slash, no trailing slash)
+- `toLibraryPath(value)` - safely converts nullable values, returns null for invalid input
+- `isLibraryPath(value)` - type guard for runtime checking
 
-Low priority - current approach works, just less type-safe.
+Updated `libraryStore.ts`:
+- State type changed from `string | null` to `LibraryPath | null`
+- `setLibraryPath` now uses `createLibraryPath()` for validation
+- Persist middleware uses `toLibraryPath()` when rehydrating from localStorage
+
+Updated API and service files (`api.ts`, `indexeddb.ts`, `coverService.ts`) to use `LibraryPath` type in function signatures, providing compile-time safety that prevents passing arbitrary strings where a validated library path is expected.
 
 ---
-
-## Completed
 
 ### Consolidate pagination logic
 

@@ -1,3 +1,5 @@
+import type { LibraryPath } from '@/types/libraryPath';
+
 const DB_NAME = 'CalibreWASM';
 const DB_VERSION = 2;
 const STORE_NAME = 'cache';
@@ -23,7 +25,7 @@ function openCacheDB(): Promise<IDBDatabase> {
 
 export async function saveToCache(
   data: Uint8Array,
-  libraryPath: string
+  libraryPath: LibraryPath
 ): Promise<void> {
   const cacheDB = await openCacheDB();
   const tx = cacheDB.transaction(STORE_NAME, 'readwrite');
@@ -40,7 +42,7 @@ export async function saveToCache(
 }
 
 export async function loadFromCache(
-  libraryPath: string
+  libraryPath: LibraryPath
 ): Promise<Uint8Array | null> {
   try {
     const cacheDB = await openCacheDB();

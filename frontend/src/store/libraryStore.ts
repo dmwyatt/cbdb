@@ -10,8 +10,11 @@ import { downloadDatabase } from '@/lib/api';
 import { saveToCache, loadFromCache, clearCache, getCacheTimestamp } from '@/lib/indexeddb';
 import { queryService } from '@/lib/queryService';
 import { offlineService } from '@/lib/offlineService';
+import { type LibraryPath, createLibraryPath, toLibraryPath } from '@/types/libraryPath';
 
 export type ViewMode = 'grid' | 'table';
+
+export type { LibraryPath };
 
 interface LibraryState {
   // Database state
@@ -25,7 +28,7 @@ interface LibraryState {
   lastSyncTime: number | null;
 
   // Library configuration (persisted)
-  libraryPath: string | null;
+  libraryPath: LibraryPath | null;
 
   // View state (persisted)
   currentView: ViewMode;
@@ -48,7 +51,7 @@ interface LibraryState {
 
 // We separate persisted state from runtime state
 interface PersistedState {
-  libraryPath: string | null;
+  libraryPath: LibraryPath | null;
   currentView: ViewMode;
 }
 
@@ -71,7 +74,7 @@ export const useLibraryStore = create<LibraryState>()(
       searchTerm: '',
 
       setLibraryPath: (path) => {
-        set({ libraryPath: path });
+        set({ libraryPath: createLibraryPath(path) });
       },
 
       loadDatabase: async (forceRefresh = false) => {
@@ -260,6 +263,15 @@ export const useLibraryStore = create<LibraryState>()(
         libraryPath: state.libraryPath,
         currentView: state.currentView,
       }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<PersistedState> | undefined;
+        return {
+          ...currentState,
+          currentView: persisted?.currentView ?? currentState.currentView,
+          // Convert plain string from storage back to LibraryPath
+          libraryPath: toLibraryPath(persisted?.libraryPath ?? null),
+        };
+      },
     }
   )
 );
