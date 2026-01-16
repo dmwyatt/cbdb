@@ -368,7 +368,9 @@ export function getBooksByFilters(
   `;
 
   const countStmt = db.prepare(countQuery);
-  countStmt.bind(params);
+  if (params.length > 0) {
+    countStmt.bind(params);
+  }
   countStmt.step();
   const total = countStmt.get()[0] as number;
   countStmt.free();
