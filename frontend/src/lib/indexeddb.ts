@@ -86,6 +86,25 @@ export async function clearCache(): Promise<void> {
   }
 }
 
+export async function getCacheTimestamp(): Promise<number | null> {
+  try {
+    const cacheDB = await openCacheDB();
+    const tx = cacheDB.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+
+    const timestamp = await new Promise<number | undefined>((resolve, reject) => {
+      const req = store.get(DB_CACHE_KEY + '_timestamp');
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+
+    return timestamp || null;
+  } catch (e) {
+    console.warn('Failed to get cache timestamp:', e);
+    return null;
+  }
+}
+
 export async function getCachedCovers(
   paths: string[]
 ): Promise<Record<string, string>> {
