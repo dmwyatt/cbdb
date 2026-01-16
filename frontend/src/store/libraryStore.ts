@@ -6,11 +6,12 @@ import {
   validateDatabase,
   type SqlJsDatabase,
 } from '@/lib/sql';
-import { downloadDatabase } from '@/lib/api';
+import { downloadDatabase, isDropboxAuthError } from '@/lib/api';
 import { saveToCache, loadFromCache, clearCache, getCacheTimestamp } from '@/lib/indexeddb';
 import { queryService } from '@/lib/queryService';
 import { offlineService } from '@/lib/offlineService';
 import { initGlobalErrorHandler } from '@/lib/errorService';
+import { setDropboxAuthErrorHandler } from '@/lib/coverService';
 import { log, LogCategory } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/utils';
 import { type LibraryPath, createLibraryPath, toLibraryPath } from '@/types/libraryPath';
@@ -32,6 +33,7 @@ interface LibraryState {
   loadingProgress: number;
   loadingMessage: string;
   error: string | null;
+  dropboxError: string | null; // Specific error for Dropbox auth failures
   loadedFromCache: boolean;
   dbSize: number;
   lastSyncTime: number | null;
@@ -62,6 +64,8 @@ interface LibraryState {
   resetLibrary: () => Promise<void>;
   setError: (error: string) => void;
   clearError: () => void;
+  setDropboxError: (error: string) => void;
+  clearDropboxError: () => void;
   cancelLoading: () => void;
 }
 
@@ -80,6 +84,7 @@ export const useLibraryStore = create<LibraryState>()(
       loadingProgress: 0,
       loadingMessage: '',
       error: null,
+      dropboxError: null,
       loadedFromCache: false,
       dbSize: 0,
       lastSyncTime: null,
@@ -210,13 +215,25 @@ export const useLibraryStore = create<LibraryState>()(
           if (!forceRefresh) {
             queryService.setDatabase(null);
           }
-          set({
-            isLoading: false,
-            loadingProgress: 0,
-            loadingMessage: '',
-            error: errorMessage,
-            ...(forceRefresh ? {} : { db: null }),
-          });
+
+          // Handle Dropbox auth errors specially
+          if (isDropboxAuthError(error)) {
+            set({
+              isLoading: false,
+              loadingProgress: 0,
+              loadingMessage: '',
+              dropboxError: errorMessage,
+              ...(forceRefresh ? {} : { db: null }),
+            });
+          } else {
+            set({
+              isLoading: false,
+              loadingProgress: 0,
+              loadingMessage: '',
+              error: errorMessage,
+              ...(forceRefresh ? {} : { db: null }),
+            });
+          }
         }
       },
 
@@ -274,6 +291,7 @@ export const useLibraryStore = create<LibraryState>()(
           db: null,
           libraryPath: null,
           error: null,
+          dropboxError: null,
           currentPage: 1,
           searchTerm: '',
           filters: DEFAULT_FILTERS,
@@ -287,6 +305,14 @@ export const useLibraryStore = create<LibraryState>()(
 
       clearError: () => {
         set({ error: null });
+      },
+
+      setDropboxError: (error) => {
+        set({ dropboxError: error });
+      },
+
+      clearDropboxError: () => {
+        set({ dropboxError: null });
       },
 
       cancelLoading: () => {
@@ -320,4 +346,9 @@ export const useLibraryStore = create<LibraryState>()(
 // Initialize global error handler with the store's setError function
 initGlobalErrorHandler((error: string) => {
   useLibraryStore.getState().setError(error);
+});
+
+// Initialize Dropbox auth error handler for cover service
+setDropboxAuthErrorHandler((error: string) => {
+  useLibraryStore.getState().setDropboxError(error);
 });
