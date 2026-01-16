@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { StarRating } from '@/components/common/StarRating';
 import { DownloadButton } from './DownloadButton';
 import { useLibraryStore } from '@/store/libraryStore';
-import { getBookDetail } from '@/lib/sql';
+import { queryService } from '@/lib/queryService';
 import { coverService } from '@/lib/coverService';
 import type { BookDetail } from '@/types/book';
 
@@ -28,9 +28,10 @@ export function BookModal() {
       return;
     }
 
-    const startTime = performance.now();
-    const detail = getBookDetail(db, selectedBookId);
-    setQueryTime(performance.now() - startTime);
+    // Use queryService for book detail query - it handles timing
+    const result = queryService.getBookDetail(selectedBookId);
+    setQueryTime(result.queryTime);
+    const detail = result.data;
     setBook(detail);
 
     // Fetch cover if available
