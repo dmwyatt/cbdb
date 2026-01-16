@@ -25,15 +25,15 @@ function App() {
     <div className="min-h-screen flex flex-col bg-slate-50">
       <Header />
 
-      {isLoading && (
+      {isLoading && !error && (
         <LoadingOverlay message={loadingMessage} progress={loadingProgress} onCancel={cancelLoading} />
       )}
 
       {showSetup && <SetupForm />}
       {showLibrary && <Library />}
 
-      {/* Show error dialog for refresh failures (when db still exists) */}
-      {showLibrary && error && (
+      {/* Show error dialog - works for both refresh failures and initial load errors */}
+      {error && (
         <ErrorAlert error={error} onDismiss={clearError} />
       )}
 

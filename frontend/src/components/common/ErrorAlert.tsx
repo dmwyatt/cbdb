@@ -20,7 +20,7 @@ export function ErrorAlert({ error, onDismiss }: ErrorAlertProps) {
 
   return (
     <Dialog open={!!error} onOpenChange={(open) => !open && onDismiss()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md z-[60]">
         <DialogHeader>
           <DialogTitle className="text-red-600">
             {isTokenError ? 'Authentication Error' : 'Refresh Failed'}
