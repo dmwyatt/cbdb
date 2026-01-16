@@ -1,19 +1,11 @@
 import { useState, useEffect } from 'react';
+import { offlineService } from '@/lib/offlineService';
 
 export function useOnlineStatus(): boolean {
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(offlineService.isOnline);
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
+    return offlineService.subscribe(setIsOnline);
   }, []);
 
   return isOnline;

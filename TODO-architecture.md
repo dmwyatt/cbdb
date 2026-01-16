@@ -71,17 +71,6 @@ Current inconsistency:
 
 ## Priority 3: Code Quality
 
-### Create OfflineService for network status
-
-**Files**: Multiple `navigator.onLine` checks scattered
-
-**Solution**: Create service that:
-- Tracks online/offline status
-- Emits events on status change
-- Provides consistent offline handling
-
----
-
 ### Add type safety for library path
 
 **Files**: Throughout - `libraryPath` is a plain string everywhere
@@ -110,6 +99,22 @@ Pagination spread across:
 ---
 
 ## Completed
+
+### Create OfflineService for network status
+
+**Files**: `frontend/src/hooks/useOnlineStatus.ts`, `frontend/src/store/libraryStore.ts`
+
+Created `frontend/src/lib/offlineService.ts` with a singleton `OfflineService` class that:
+- Tracks online/offline status via browser events
+- Provides `isOnline` getter for synchronous status checks
+- Provides `subscribe()` method for status change callbacks
+- Provides `requireOnline()` method that throws if offline (useful for validation)
+- Is the single source of truth for network status
+
+Updated `useOnlineStatus.ts` hook to use the service (reduced from 17 lines to 12).
+Updated `libraryStore.ts` to use `offlineService` instead of direct `navigator.onLine` checks.
+
+---
 
 ### Create QueryService for database queries
 
