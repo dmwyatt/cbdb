@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLibraryStore } from '@/store/libraryStore';
 import { coverService } from '@/lib/coverService';
+import { log, LogCategory } from '@/lib/logger';
 import type { Book } from '@/types/book';
 
 export function useCovers(books: Book[]) {
@@ -39,7 +40,7 @@ export function useCovers(books: Book[]) {
           setCovers((prev) => ({ ...prev, ...newCovers }));
         }
       } catch (e) {
-        console.error('Failed to load covers:', e);
+        log.warn(LogCategory.COVER, 'Failed to load covers', e);
       }
 
       setLoading(false);

@@ -10,6 +10,9 @@ import { downloadDatabase } from '@/lib/api';
 import { saveToCache, loadFromCache, clearCache, getCacheTimestamp } from '@/lib/indexeddb';
 import { queryService } from '@/lib/queryService';
 import { offlineService } from '@/lib/offlineService';
+import { initGlobalErrorHandler } from '@/lib/errorService';
+import { log, LogCategory } from '@/lib/logger';
+import { getErrorMessage } from '@/lib/utils';
 import { type LibraryPath, createLibraryPath, toLibraryPath } from '@/types/libraryPath';
 
 export type ViewMode = 'grid' | 'table';
@@ -115,7 +118,7 @@ export const useLibraryStore = create<LibraryState>()(
                 });
               }
             } catch (cacheError) {
-              console.warn('Cache read failed, will download fresh:', cacheError);
+              log.warn(LogCategory.CACHE, 'Cache read failed, will download fresh', cacheError);
               await clearCache();
               dbData = null;
             }
@@ -145,7 +148,7 @@ export const useLibraryStore = create<LibraryState>()(
               await saveToCache(dbData, libraryPath);
               syncTime = Date.now();
             } catch (cacheError) {
-              console.warn('Failed to cache database:', cacheError);
+              log.warn(LogCategory.CACHE, 'Failed to cache database', cacheError);
               syncTime = Date.now(); // Still track sync time even if caching fails
             }
           }
@@ -160,7 +163,7 @@ export const useLibraryStore = create<LibraryState>()(
               throw new Error('Database validation failed');
             }
           } catch (dbError) {
-            console.error('Database appears corrupted:', dbError);
+            log.error(LogCategory.DATABASE, 'Database validation failed', dbError);
             if (get().loadedFromCache) {
               // Cache was corrupted, clear and retry
               await clearCache();
@@ -183,9 +186,8 @@ export const useLibraryStore = create<LibraryState>()(
             currentPage: 1,
           });
         } catch (error) {
-          console.error('Failed to load database:', error);
-          const errorMessage =
-            error instanceof Error ? error.message : 'Failed to load database';
+          log.error(LogCategory.DATABASE, 'Failed to load database', error);
+          const errorMessage = getErrorMessage(error, 'Failed to load database');
 
           // Always clear loading state
           // IMPORTANT: Never reset db during refresh (forceRefresh=true) to prevent
@@ -275,3 +277,8 @@ export const useLibraryStore = create<LibraryState>()(
     }
   )
 );
+
+// Initialize global error handler with the store's setError function
+initGlobalErrorHandler((error: string) => {
+  useLibraryStore.getState().setError(error);
+});

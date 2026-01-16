@@ -76,11 +76,50 @@ frontend/               # React + TypeScript + Vite app
 - Types/interfaces in `src/types/`
 - SQL queries must use prepared statements with `?` placeholders
 - State management via Zustand store
+- Error handling via `errorService` and `logger` (see below)
 
 ### CSS
 - Tailwind CSS utility classes
 - shadcn/ui components for consistent design
 - Custom styles in `src/index.css`
+
+### Error Handling
+
+**Global Errors** (user-facing modal):
+```typescript
+import { showGlobalError } from '@/lib/errorService';
+
+// Shows error in modal dialog, also logs to console
+showGlobalError(error);
+showGlobalError('Something went wrong');
+```
+
+**Structured Logging** (console only, for debugging):
+```typescript
+import { log, LogCategory } from '@/lib/logger';
+
+// All logs prefixed with [cbdb] for easy filtering in devtools
+log.debug(LogCategory.CACHE, 'Checking cache', { key });
+log.info(LogCategory.DATABASE, 'Database loaded');
+log.warn(LogCategory.COVER, 'Failed to fetch cover', error);
+log.error(LogCategory.DATABASE, 'Validation failed', error);
+```
+
+**Available log categories:** `COVER`, `CACHE`, `QUERY`, `DATABASE`, `NETWORK`
+
+New categories can be added to `LogCategory` in `logger.ts`, but avoid category explosion - too many categories defeats the purpose of filtering. Prefer reusing existing categories when reasonable.
+
+**Utility:**
+```typescript
+import { getErrorMessage } from '@/lib/utils';
+
+// Extract message from unknown error type
+const message = getErrorMessage(error, 'fallback message');
+```
+
+**When to use:**
+- `showGlobalError()`: User needs to know (download failed, offline, validation errors)
+- `log.warn()`/`log.error()`: Debug logging (cover fetch, cache, query failures)
 
 ## Security Requirements
 
