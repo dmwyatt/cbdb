@@ -4,8 +4,11 @@ from flask import Flask, request, jsonify, Response, send_from_directory
 from dropbox_api import DropboxAPI, normalize_library_path
 
 # Serve React build from frontend/dist
+# Note: We set static_folder=None to disable Flask's automatic static serving,
+# which conflicts with our catch-all route for client-side routing.
+# Static files are served manually in the catch_all() route.
 STATIC_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frontend', 'dist')
-app = Flask(__name__, static_folder=STATIC_FOLDER, static_url_path='')
+app = Flask(__name__, static_folder=None)
 
 # App password for authentication (REQUIRED for security)
 APP_PASSWORD = os.getenv('APP_PASSWORD', '').strip()
@@ -60,15 +63,15 @@ def get_dropbox_api():
 @app.route('/health')
 def health():
     """Health check endpoint."""
-    return jsonify({'status': 'ok', 'static_folder': app.static_folder, 'exists': os.path.exists(app.static_folder)})
+    return jsonify({'status': 'ok', 'static_folder': STATIC_FOLDER, 'exists': os.path.exists(STATIC_FOLDER)})
 
 
 @app.route('/')
 def index():
     """Serve the React app."""
-    if not os.path.exists(app.static_folder):
-        return jsonify({'error': 'Frontend not built', 'static_folder': app.static_folder}), 500
-    return send_from_directory(app.static_folder, 'index.html')
+    if not os.path.exists(STATIC_FOLDER):
+        return jsonify({'error': 'Frontend not built', 'static_folder': STATIC_FOLDER}), 500
+    return send_from_directory(STATIC_FOLDER, 'index.html')
 
 
 @app.route('/<path:path>')
@@ -82,14 +85,14 @@ def catch_all(path):
         return jsonify({'error': 'Not found'}), 404
 
     # Try to serve static file first (JS, CSS, images, etc.)
-    static_file_path = os.path.join(app.static_folder, path)
+    static_file_path = os.path.join(STATIC_FOLDER, path)
     if os.path.isfile(static_file_path):
-        return send_from_directory(app.static_folder, path)
+        return send_from_directory(STATIC_FOLDER, path)
 
     # For all other routes, serve index.html and let React Router handle it
-    if not os.path.exists(app.static_folder):
-        return jsonify({'error': 'Frontend not built', 'static_folder': app.static_folder}), 500
-    return send_from_directory(app.static_folder, 'index.html')
+    if not os.path.exists(STATIC_FOLDER):
+        return jsonify({'error': 'Frontend not built', 'static_folder': STATIC_FOLDER}), 500
+    return send_from_directory(STATIC_FOLDER, 'index.html')
 
 
 @app.route('/api/auth-check')
