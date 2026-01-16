@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { useLibraryStore } from '@/store/libraryStore';
 import { queryService } from '@/lib/queryService';
 import type { SortField } from '@/types/filters';
 import { cn } from '@/lib/utils';
+
+const MAX_VISIBLE_TAGS = 50;
 
 const FilterIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -45,11 +48,29 @@ const RATING_OPTIONS = [
 export function FilterPanel() {
   const { db, filters, sort, setFilters, setSort, resetFilters } = useLibraryStore();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [tagSearch, setTagSearch] = useState('');
 
   // Get filter options from the database
   const filterOptions = useMemo(() => {
     return queryService.getFilterOptions().data;
   }, [db]);
+
+  // Filter and limit tags for display
+  const { visibleTags, totalMatching, hasMore } = useMemo(() => {
+    const searchLower = tagSearch.toLowerCase().trim();
+
+    // Get unselected tags that match the search
+    const matchingTags = filterOptions.tags.filter(
+      (tag) => !filters.tags.includes(tag) &&
+        (searchLower === '' || tag.toLowerCase().includes(searchLower))
+    );
+
+    return {
+      visibleTags: matchingTags.slice(0, MAX_VISIBLE_TAGS),
+      totalMatching: matchingTags.length,
+      hasMore: matchingTags.length > MAX_VISIBLE_TAGS,
+    };
+  }, [filterOptions.tags, filters.tags, tagSearch]);
 
   const hasActiveFilters =
     filters.tags.length > 0 ||
@@ -306,24 +327,64 @@ export function FilterPanel() {
           {filterOptions.tags.length > 0 && (
             <div className="mt-4">
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Tags
+                Tags ({filterOptions.tags.length} total)
               </label>
-              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                {filterOptions.tags.map((tag) => (
+
+              {/* Search input for tags */}
+              <Input
+                type="text"
+                placeholder="Search tags..."
+                value={tagSearch}
+                onChange={(e) => setTagSearch(e.target.value)}
+                className="mb-3 max-w-xs h-8 text-sm"
+              />
+
+              {/* Selected tags - always visible at top */}
+              {filters.tags.length > 0 && (
+                <div className="mb-3">
+                  <span className="text-xs text-slate-500 mb-1 block">Selected:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {filters.tags.map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => handleTagToggle(tag)}
+                        className="px-2 py-1 text-xs rounded-full border transition-colors bg-blue-500 text-white border-blue-500 hover:bg-blue-600"
+                      >
+                        {tag} <span className="ml-1">×</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Available tags */}
+              <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+                {visibleTags.map((tag) => (
                   <button
                     key={tag}
                     onClick={() => handleTagToggle(tag)}
-                    className={cn(
-                      'px-2 py-1 text-xs rounded-full border transition-colors',
-                      filters.tags.includes(tag)
-                        ? 'bg-blue-500 text-white border-blue-500'
-                        : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-blue-50'
-                    )}
+                    className="px-2 py-1 text-xs rounded-full border transition-colors bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-blue-50"
                   >
                     {tag}
                   </button>
                 ))}
               </div>
+
+              {/* Status text */}
+              {tagSearch && (
+                <p className="text-xs text-slate-500 mt-2">
+                  {totalMatching === 0
+                    ? 'No tags match your search'
+                    : hasMore
+                      ? `Showing ${MAX_VISIBLE_TAGS} of ${totalMatching} matching tags`
+                      : `${totalMatching} matching tag${totalMatching === 1 ? '' : 's'}`}
+                </p>
+              )}
+              {!tagSearch && hasMore && (
+                <p className="text-xs text-slate-500 mt-2">
+                  Showing {MAX_VISIBLE_TAGS} of {totalMatching} tags. Use search to find more.
+                </p>
+              )}
             </div>
           )}
         </div>
