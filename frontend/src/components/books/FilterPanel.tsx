@@ -1,10 +1,20 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { useLibraryStore } from '@/store/libraryStore';
 import { queryService } from '@/lib/queryService';
 import type { SortField } from '@/types/filters';
 import { cn } from '@/lib/utils';
+import { CheckIcon, ChevronsUpDownIcon } from 'lucide-react';
 
 const FilterIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -45,6 +55,7 @@ const RATING_OPTIONS = [
 export function FilterPanel() {
   const { db, filters, sort, setFilters, setSort, resetFilters } = useLibraryStore();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [tagPopoverOpen, setTagPopoverOpen] = useState(false);
 
   // Get filter options from the database
   const filterOptions = useMemo(() => {
@@ -308,22 +319,65 @@ export function FilterPanel() {
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Tags
               </label>
-              <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                {filterOptions.tags.map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={() => handleTagToggle(tag)}
-                    className={cn(
-                      'px-2 py-1 text-xs rounded-full border transition-colors',
-                      filters.tags.includes(tag)
-                        ? 'bg-blue-500 text-white border-blue-500'
-                        : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:bg-blue-50'
-                    )}
+
+              {/* Tag Combobox */}
+              <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={tagPopoverOpen}
+                    className="w-full max-w-sm justify-between h-9 font-normal"
                   >
-                    {tag}
-                  </button>
-                ))}
-              </div>
+                    {filters.tags.length > 0
+                      ? `${filters.tags.length} tag${filters.tags.length === 1 ? '' : 's'} selected`
+                      : 'Select tags...'}
+                    <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search tags..." />
+                    <CommandList>
+                      <CommandEmpty>No tags found.</CommandEmpty>
+                      <CommandGroup>
+                        {filterOptions.tags.map((tag) => (
+                          <CommandItem
+                            key={tag}
+                            value={tag}
+                            onSelect={() => handleTagToggle(tag)}
+                          >
+                            <CheckIcon
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                filters.tags.includes(tag) ? 'opacity-100' : 'opacity-0'
+                              )}
+                            />
+                            {tag}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+
+              {/* Selected tags display */}
+              {filters.tags.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {filters.tags.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="secondary"
+                      className="gap-1 pr-1 cursor-pointer hover:bg-slate-200"
+                      onClick={() => handleTagToggle(tag)}
+                    >
+                      {tag}
+                      <span className="ml-0.5 text-slate-500 hover:text-slate-700">×</span>
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
