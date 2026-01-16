@@ -179,27 +179,18 @@ export const useLibraryStore = create<LibraryState>()(
           });
         } catch (error) {
           console.error('Failed to load database:', error);
-          const errorMessage = error instanceof Error ? error.message : 'Failed to load database';
+          const errorMessage =
+            error instanceof Error ? error.message : 'Failed to load database';
 
-          if (isRefresh && existingDb) {
-            // Refresh failed but we have an existing database - preserve it
-            set({
-              isLoading: false,
-              loadingProgress: 0,
-              loadingMessage: '',
-              error: errorMessage,
-              // Keep existing db - don't set to null
-            });
-          } else {
-            // Initial load failed - no existing db to preserve
-            set({
-              isLoading: false,
-              loadingProgress: 0,
-              loadingMessage: '',
-              error: errorMessage,
-              db: null,
-            });
-          }
+          // Always clear loading state, preserve db if this was a refresh
+          set({
+            isLoading: false,
+            loadingProgress: 0,
+            loadingMessage: '',
+            error: errorMessage,
+            // Only set db to null if this wasn't a refresh with existing data
+            ...(isRefresh && existingDb ? {} : { db: null }),
+          });
         }
       },
 
