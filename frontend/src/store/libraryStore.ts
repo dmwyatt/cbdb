@@ -44,6 +44,7 @@ interface LibraryState {
   resetLibrary: () => Promise<void>;
   setError: (error: string) => void;
   clearError: () => void;
+  cancelLoading: () => void;
 }
 
 // We separate persisted state from runtime state
@@ -241,6 +242,15 @@ export const useLibraryStore = create<LibraryState>()(
 
       clearError: () => {
         set({ error: null });
+      },
+
+      cancelLoading: () => {
+        set({
+          isLoading: false,
+          loadingProgress: 0,
+          loadingMessage: '',
+          error: 'Operation cancelled',
+        });
       },
     }),
     {

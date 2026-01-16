@@ -8,7 +8,7 @@ import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { useLibraryStore } from '@/store/libraryStore';
 
 function App() {
-  const { db, libraryPath, isLoading, loadingMessage, loadingProgress, error, loadDatabase, clearError } =
+  const { db, libraryPath, isLoading, loadingMessage, loadingProgress, error, loadDatabase, clearError, cancelLoading } =
     useLibraryStore();
 
   // Auto-load database if we have a saved library path
@@ -26,7 +26,7 @@ function App() {
       <Header />
 
       {isLoading && (
-        <LoadingOverlay message={loadingMessage} progress={loadingProgress} />
+        <LoadingOverlay message={loadingMessage} progress={loadingProgress} onCancel={cancelLoading} />
       )}
 
       {showSetup && <SetupForm />}
