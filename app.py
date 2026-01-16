@@ -190,6 +190,65 @@ def download_link():
         }), 500
 
 
+@app.route('/api/covers', methods=['POST'])
+def get_covers():
+    """
+    Get thumbnails for multiple book covers in one request.
+    Accepts JSON body: { "paths": ["Author/Book (1)", ...] }
+    Returns: { "covers": { "Author/Book (1)": "base64...", ... } }
+    """
+    api = get_dropbox_api()
+    if not api:
+        return jsonify({
+            'success': False,
+            'error': 'Dropbox access token not configured'
+        }), 500
+
+    library_path = get_library_path()
+    if not library_path:
+        return jsonify({
+            'success': False,
+            'error': 'No library path provided. Set X-Library-Path header.'
+        }), 400
+
+    data = request.json or {}
+    book_paths = data.get('paths', [])
+
+    if not book_paths:
+        return jsonify({'success': True, 'covers': {}})
+
+    # Limit to 25 (Dropbox batch limit)
+    book_paths = book_paths[:25]
+
+    # Normalize library path
+    if not library_path.startswith("/"):
+        library_path = "/" + library_path
+    library_path = library_path.rstrip("/")
+
+    # Build full cover paths
+    cover_paths = [
+        f"{library_path}/{path}/cover.jpg"
+        for path in book_paths
+    ]
+
+    try:
+        results = api.get_thumbnails_batch(cover_paths, size="w128h128")
+
+        # Map back to book paths
+        covers = {}
+        for i, result in enumerate(results):
+            if result["thumbnail"]:
+                covers[book_paths[i]] = result["thumbnail"]
+
+        return jsonify({'success': True, 'covers': covers})
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=os.getenv('FLASK_DEBUG', 'False') == 'True')

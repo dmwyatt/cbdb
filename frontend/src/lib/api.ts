@@ -1,4 +1,4 @@
-import type { DownloadLinkResponse } from '@/types/api';
+import type { DownloadLinkResponse, CoversResponse } from '@/types/api';
 
 export async function downloadDatabase(libraryPath: string): Promise<Uint8Array> {
   const controller = new AbortController();
@@ -67,6 +67,42 @@ export async function getDownloadLink(
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('Request timed out. Please check your connection and try again.');
+    }
+    throw error;
+  }
+}
+
+export async function fetchCovers(
+  libraryPath: string,
+  bookPaths: string[]
+): Promise<Record<string, string>> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+  try {
+    const response = await fetch('/api/covers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Library-Path': libraryPath,
+      },
+      body: JSON.stringify({ paths: bookPaths }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    const data: CoversResponse = await response.json();
+
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to fetch covers');
+    }
+
+    return data.covers || {};
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timed out while fetching covers.');
     }
     throw error;
   }

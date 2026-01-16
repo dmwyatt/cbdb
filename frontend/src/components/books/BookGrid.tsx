@@ -1,4 +1,5 @@
 import { BookCard } from './BookCard';
+import { useCovers } from '@/hooks/useCovers';
 import type { Book } from '@/types/book';
 
 interface BookGridProps {
@@ -7,6 +8,8 @@ interface BookGridProps {
 }
 
 export function BookGrid({ books, onBookClick }: BookGridProps) {
+  const { covers } = useCovers(books);
+
   if (books.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
@@ -21,6 +24,7 @@ export function BookGrid({ books, onBookClick }: BookGridProps) {
         <BookCard
           key={book.id}
           book={book}
+          coverUrl={covers[book.path]}
           onClick={() => onBookClick(book.id)}
         />
       ))}

@@ -13,3 +13,9 @@ export interface DownloadLinkResponse {
   link?: string;
   error?: string;
 }
+
+export interface CoversResponse {
+  success: boolean;
+  covers?: Record<string, string>;
+  error?: string;
+}

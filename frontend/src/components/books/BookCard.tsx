@@ -4,10 +4,11 @@ import type { Book } from '@/types/book';
 
 interface BookCardProps {
   book: Book;
+  coverUrl?: string;
   onClick: () => void;
 }
 
-export function BookCard({ book, onClick }: BookCardProps) {
+export function BookCard({ book, coverUrl, onClick }: BookCardProps) {
   return (
     <Card
       className="cursor-pointer hover:shadow-lg transition-shadow"
@@ -15,8 +16,19 @@ export function BookCard({ book, onClick }: BookCardProps) {
     >
       <CardContent className="p-4">
         <div className="flex gap-4">
-          <div className="w-16 h-20 bg-slate-100 rounded flex items-center justify-center text-3xl flex-shrink-0">
-            📚
+          <div className="w-16 h-20 bg-slate-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {coverUrl ? (
+              <img
+                src={`data:image/jpeg;base64,${coverUrl}`}
+                alt={book.title}
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <span className="text-3xl text-slate-400">
+                {book.has_cover ? '...' : '📚'}
+              </span>
+            )}
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="font-medium text-slate-800 line-clamp-2 leading-tight">
