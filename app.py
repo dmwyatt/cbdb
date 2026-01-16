@@ -1,7 +1,16 @@
+import logging
 import os
 from functools import wraps
 from flask import Flask, request, jsonify, Response, send_from_directory
 from dropbox_api import DropboxAPI, normalize_library_path
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger('cbdb')
 
 # Serve React build from frontend/dist
 # Note: We set static_folder=None to disable Flask's automatic static serving,
@@ -282,6 +291,7 @@ def get_covers():
     """
     api = get_dropbox_api()
     if not api:
+        logger.error("Covers request failed: Dropbox API not configured")
         return jsonify({
             'success': False,
             'error': 'Dropbox access token not configured'
@@ -289,6 +299,7 @@ def get_covers():
 
     library_path = get_library_path()
     if not library_path:
+        logger.warning("Covers request failed: No library path in header")
         return jsonify({
             'success': False,
             'error': 'No library path provided. Set X-Library-Path header.'
@@ -298,10 +309,14 @@ def get_covers():
     book_paths = data.get('paths', [])
 
     if not book_paths:
+        logger.debug("Covers request: empty paths list")
         return jsonify({'success': True, 'covers': {}})
 
     # Limit to 25 (Dropbox batch limit)
+    original_count = len(book_paths)
     book_paths = book_paths[:25]
+
+    logger.info(f"Covers request: {len(book_paths)} paths requested (of {original_count} total), library={library_path}")
 
     library_path = normalize_library_path(library_path)
 
@@ -316,13 +331,23 @@ def get_covers():
 
         # Map back to book paths
         covers = {}
+        failed_paths = []
         for i, result in enumerate(results):
             if result["thumbnail"]:
                 covers[book_paths[i]] = result["thumbnail"]
+            elif result.get("error"):
+                failed_paths.append((book_paths[i], result["error"]))
+
+        logger.info(f"Covers result: {len(covers)} succeeded, {len(failed_paths)} failed")
+        if failed_paths:
+            # Log first few failures for debugging
+            sample_failures = failed_paths[:3]
+            logger.warning(f"Cover failures (sample): {sample_failures}")
 
         return jsonify({'success': True, 'covers': covers})
 
     except Exception as e:
+        logger.error(f"Covers request failed with exception: {e}", exc_info=True)
         return jsonify({
             'success': False,
             'error': str(e)

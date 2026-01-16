@@ -1,5 +1,8 @@
+import logging
 import os
 import requests
+
+logger = logging.getLogger('cbdb.dropbox')
 
 
 def normalize_library_path(path: str) -> str:
@@ -266,6 +269,9 @@ class DropboxAPI:
         if len(paths) > 25:
             raise ValueError("Maximum 25 thumbnails per batch")
 
+        logger.info(f"Fetching {len(paths)} thumbnails from Dropbox (size={size})")
+        logger.debug(f"Thumbnail paths: {paths[:3]}{'...' if len(paths) > 3 else ''}")
+
         entries = [
             {
                 "path": path,
@@ -284,7 +290,10 @@ class DropboxAPI:
                 timeout=30,
             )
 
+            logger.info(f"Dropbox thumbnail API response: status={response.status_code}")
+
             if response.status_code == 401:
+                logger.error("Dropbox authentication failed (401)")
                 raise Exception(
                     "Dropbox authentication failed. Please check:\n"
                     "1. Token was copied correctly (no extra spaces or missing characters)\n"
@@ -293,8 +302,25 @@ class DropboxAPI:
                     "Generate a new token at https://www.dropbox.com/developers/apps"
                 )
 
+            if response.status_code != 200:
+                logger.error(f"Dropbox API error: status={response.status_code}, body={response.text[:500]}")
+
             response.raise_for_status()
             results = response.json().get("entries", [])
+
+            # Count successes and failures for logging
+            success_count = sum(1 for r in results if r.get(".tag") == "success")
+            failure_count = len(results) - success_count
+            logger.info(f"Dropbox thumbnail results: {success_count} success, {failure_count} failed")
+
+            # Log failure details
+            if failure_count > 0:
+                failures = [
+                    (paths[i], r.get("failure", {}))
+                    for i, r in enumerate(results)
+                    if r.get(".tag") == "failure"
+                ]
+                logger.warning(f"Thumbnail failures: {failures[:5]}{'...' if len(failures) > 5 else ''}")
 
             # Each result has either:
             # - {".tag": "success", "metadata": {...}, "thumbnail": "base64data"}
@@ -309,6 +335,7 @@ class DropboxAPI:
             ]
 
         except requests.exceptions.RequestException as e:
+            logger.error(f"Dropbox thumbnail request failed: {e}", exc_info=True)
             raise Exception(f"Failed to get thumbnails: {str(e)}")
 
     def get_temporary_link(self, path):
