@@ -8,6 +8,7 @@ import { StatusBar } from '@/components/layout/StatusBar';
 import { useLibraryStore } from '@/store/libraryStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { queryService } from '@/lib/queryService';
+import { calculateTotalPages } from '@/lib/pagination';
 
 export function Library() {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export function Library() {
     };
   }, [db, debouncedSearchTerm, currentPage, perPage]);
 
-  const totalPages = Math.ceil(total / perPage);
+  const totalPages = calculateTotalPages(total, perPage);
 
   const handleBookClick = (bookId: number) => {
     navigate(`/book/${bookId}`);

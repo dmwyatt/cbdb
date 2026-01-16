@@ -1,4 +1,5 @@
 import type { Book, BookDetail, BooksResult, BookFormat } from '@/types/book';
+import { calculateOffset } from './pagination';
 
 // Types for sql.js (loaded via CDN script tag in index.html)
 export interface SqlJsDatabase {
@@ -64,7 +65,7 @@ export function getBooks(
   page: number,
   perPage: number
 ): BooksResult {
-  const offset = (page - 1) * perPage;
+  const offset = calculateOffset(page, perPage);
 
   const countResult = db.exec('SELECT COUNT(*) as count FROM books');
   const total = countResult[0].values[0][0] as number;
@@ -103,7 +104,7 @@ export function searchBooks(
   page: number,
   perPage: number
 ): BooksResult {
-  const offset = (page - 1) * perPage;
+  const offset = calculateOffset(page, perPage);
   const searchPattern = `%${term}%`;
 
   const countQuery = `

@@ -85,20 +85,25 @@ Low priority - current approach works, just less type-safe.
 
 ---
 
+## Completed
+
 ### Consolidate pagination logic
 
-**Files**: `libraryStore.ts`, `Library.tsx`, `lib/sql.ts`
+**Files**: `frontend/src/lib/pagination.ts`, `frontend/src/lib/sql.ts`, `frontend/src/components/books/Library.tsx`
 
-Pagination spread across:
-- Store: `currentPage`, `perPage`
-- Component: `totalPages` calculation
-- SQL: pagination in query
+Created `frontend/src/lib/pagination.ts` with pagination utilities:
+- `PaginationParams` and `PaginationResult` type definitions
+- `calculateOffset(page, perPage)` - SQL OFFSET calculation
+- `calculateTotalPages(total, perPage)` - Total pages calculation
+- `createPaginationResult()` - Create complete pagination metadata
+- `clampPage()` - Ensure page is within valid bounds
 
-**Solution**: Create pagination utility or keep in one place.
+Updated `sql.ts` to use `calculateOffset()` in both `getBooks()` and `searchBooks()`.
+Updated `Library.tsx` to use `calculateTotalPages()` instead of inline `Math.ceil()`.
+
+State (`currentPage`, `perPage`) remains in the store where it belongs; only the calculation logic is consolidated.
 
 ---
-
-## Completed
 
 ### Create OfflineService for network status
 
