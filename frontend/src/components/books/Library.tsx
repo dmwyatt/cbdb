@@ -27,7 +27,7 @@ export function Library() {
   const debouncedSearchTerm = useDebounce(searchTerm, 150);
 
   // Use queryService for all database queries - it handles timing and error handling
-  const { books, total, queryTime } = useMemo(() => {
+  const { books, total, queryTime, queryError } = useMemo(() => {
     const result = queryService.queryBooksWithFilters(
       debouncedSearchTerm,
       filters,
@@ -39,6 +39,7 @@ export function Library() {
       books: result.data.books,
       total: result.data.total,
       queryTime: result.queryTime,
+      queryError: result.error,
     };
   }, [db, debouncedSearchTerm, filters, sort, currentPage, perPage]);
 
@@ -67,6 +68,13 @@ export function Library() {
         </div>
 
         <FilterPanel />
+
+        {queryError && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-800 font-medium">Query Error</p>
+            <p className="text-red-600 text-sm mt-1">{queryError}</p>
+          </div>
+        )}
 
         {currentView === 'grid' ? (
           <BookGrid books={books} onBookClick={handleBookClick} />

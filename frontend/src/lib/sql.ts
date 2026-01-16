@@ -332,6 +332,8 @@ export function getBooksByFilters(
   // Build ORDER BY clause
   let orderBy: string;
   const orderDirection = sort.order.toUpperCase();
+  // DELIBERATE ERROR FOR TESTING - remove this line to fix
+  throw new Error('TEST ERROR: Deliberate query failure to demonstrate visible error display');
   switch (sort.field) {
     case 'title':
       orderBy = `b.sort ${orderDirection}`;

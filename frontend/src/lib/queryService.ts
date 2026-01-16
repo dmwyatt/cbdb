@@ -4,12 +4,15 @@ import type { SqlJsDatabase } from './sql';
 import { getBooks, searchBooks, getBookDetail, getFilterOptions, getBooksByFilters } from './sql';
 import { log, LogCategory } from './logger';
 
+import { getErrorMessage } from './utils';
+
 /**
- * Result types that include query timing information
+ * Result types that include query timing information and error state
  */
 export interface QueryResult<T> {
   data: T;
   queryTime: number;
+  error: string | null;
 }
 
 export interface BooksQueryResult extends QueryResult<BooksResult> {
@@ -55,6 +58,7 @@ class QueryService {
       return {
         data: { books: [], total: 0 },
         queryTime: 0,
+        error: null,
       };
     }
 
@@ -62,13 +66,15 @@ class QueryService {
     try {
       const result = getBooks(this.db, page, perPage);
       const queryTime = performance.now() - startTime;
-      return { data: result, queryTime };
+      return { data: result, queryTime, error: null };
     } catch (error) {
       const queryTime = performance.now() - startTime;
+      const errorMessage = getErrorMessage(error, 'Failed to fetch books');
       log.warn(LogCategory.QUERY, 'getBooks query failed', error);
       return {
         data: { books: [], total: 0 },
         queryTime,
+        error: errorMessage,
       };
     }
   }
@@ -81,6 +87,7 @@ class QueryService {
       return {
         data: { books: [], total: 0 },
         queryTime: 0,
+        error: null,
       };
     }
 
@@ -88,13 +95,15 @@ class QueryService {
     try {
       const result = searchBooks(this.db, term, page, perPage);
       const queryTime = performance.now() - startTime;
-      return { data: result, queryTime };
+      return { data: result, queryTime, error: null };
     } catch (error) {
       const queryTime = performance.now() - startTime;
+      const errorMessage = getErrorMessage(error, 'Search failed');
       log.warn(LogCategory.QUERY, 'searchBooks query failed', error);
       return {
         data: { books: [], total: 0 },
         queryTime,
+        error: errorMessage,
       };
     }
   }
@@ -104,18 +113,19 @@ class QueryService {
    */
   getBookDetail(bookId: number): BookDetailQueryResult {
     if (!this.db) {
-      return { data: null, queryTime: 0 };
+      return { data: null, queryTime: 0, error: null };
     }
 
     const startTime = performance.now();
     try {
       const result = getBookDetail(this.db, bookId);
       const queryTime = performance.now() - startTime;
-      return { data: result, queryTime };
+      return { data: result, queryTime, error: null };
     } catch (error) {
       const queryTime = performance.now() - startTime;
+      const errorMessage = getErrorMessage(error, 'Failed to fetch book details');
       log.warn(LogCategory.QUERY, 'getBookDetail query failed', error);
-      return { data: null, queryTime };
+      return { data: null, queryTime, error: errorMessage };
     }
   }
 
@@ -141,6 +151,7 @@ class QueryService {
       return {
         data: { tags: [], series: [], publishers: [], formats: [] },
         queryTime: 0,
+        error: null,
       };
     }
 
@@ -148,13 +159,15 @@ class QueryService {
     try {
       const result = getFilterOptions(this.db);
       const queryTime = performance.now() - startTime;
-      return { data: result, queryTime };
+      return { data: result, queryTime, error: null };
     } catch (error) {
       const queryTime = performance.now() - startTime;
+      const errorMessage = getErrorMessage(error, 'Failed to load filter options');
       log.warn(LogCategory.QUERY, 'getFilterOptions query failed', error);
       return {
         data: { tags: [], series: [], publishers: [], formats: [] },
         queryTime,
+        error: errorMessage,
       };
     }
   }
@@ -173,6 +186,7 @@ class QueryService {
       return {
         data: { books: [], total: 0 },
         queryTime: 0,
+        error: null,
       };
     }
 
@@ -180,13 +194,15 @@ class QueryService {
     try {
       const result = getBooksByFilters(this.db, searchTerm, filters, sort, page, perPage);
       const queryTime = performance.now() - startTime;
-      return { data: result, queryTime };
+      return { data: result, queryTime, error: null };
     } catch (error) {
       const queryTime = performance.now() - startTime;
+      const errorMessage = getErrorMessage(error, 'Failed to query books');
       log.warn(LogCategory.QUERY, 'queryBooksWithFilters failed', error);
       return {
         data: { books: [], total: 0 },
         queryTime,
+        error: errorMessage,
       };
     }
   }
