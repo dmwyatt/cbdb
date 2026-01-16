@@ -14,6 +14,12 @@ import { initGlobalErrorHandler } from '@/lib/errorService';
 import { log, LogCategory } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/utils';
 import { type LibraryPath, createLibraryPath, toLibraryPath } from '@/types/libraryPath';
+import {
+  type BookFilters,
+  type SortOptions,
+  DEFAULT_FILTERS,
+  DEFAULT_SORT,
+} from '@/types/filters';
 
 export type ViewMode = 'grid' | 'table';
 
@@ -39,6 +45,10 @@ interface LibraryState {
   perPage: number;
   searchTerm: string;
 
+  // Filter and sort state
+  filters: BookFilters;
+  sort: SortOptions;
+
   // Actions
   setLibraryPath: (path: string) => void;
   loadDatabase: (forceRefresh?: boolean) => Promise<void>;
@@ -46,6 +56,9 @@ interface LibraryState {
   setView: (view: ViewMode) => void;
   setSearchTerm: (term: string) => void;
   setPage: (page: number) => void;
+  setFilters: (filters: Partial<BookFilters>) => void;
+  setSort: (sort: Partial<SortOptions>) => void;
+  resetFilters: () => void;
   resetLibrary: () => Promise<void>;
   setError: (error: string) => void;
   clearError: () => void;
@@ -75,6 +88,8 @@ export const useLibraryStore = create<LibraryState>()(
       currentPage: 1,
       perPage: 20,
       searchTerm: '',
+      filters: DEFAULT_FILTERS,
+      sort: DEFAULT_SORT,
 
       setLibraryPath: (path) => {
         set({ libraryPath: createLibraryPath(path) });
@@ -230,6 +245,28 @@ export const useLibraryStore = create<LibraryState>()(
         set({ currentPage: page });
       },
 
+      setFilters: (newFilters) => {
+        set((state) => ({
+          filters: { ...state.filters, ...newFilters },
+          currentPage: 1, // Reset to first page when filters change
+        }));
+      },
+
+      setSort: (newSort) => {
+        set((state) => ({
+          sort: { ...state.sort, ...newSort },
+          currentPage: 1, // Reset to first page when sort changes
+        }));
+      },
+
+      resetFilters: () => {
+        set({
+          filters: DEFAULT_FILTERS,
+          sort: DEFAULT_SORT,
+          currentPage: 1,
+        });
+      },
+
       resetLibrary: async () => {
         await clearCache();
         queryService.setDatabase(null);
@@ -239,6 +276,8 @@ export const useLibraryStore = create<LibraryState>()(
           error: null,
           currentPage: 1,
           searchTerm: '',
+          filters: DEFAULT_FILTERS,
+          sort: DEFAULT_SORT,
         });
       },
 
