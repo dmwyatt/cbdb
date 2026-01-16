@@ -3,7 +3,8 @@ from flask import Flask, request, jsonify, Response, send_from_directory
 from dropbox_api import DropboxAPI
 
 # Serve React build from frontend/dist
-app = Flask(__name__, static_folder='frontend/dist', static_url_path='')
+STATIC_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frontend', 'dist')
+app = Flask(__name__, static_folder=STATIC_FOLDER, static_url_path='')
 
 
 def get_library_path():
@@ -19,9 +20,17 @@ def get_dropbox_api():
         return None
 
 
+@app.route('/health')
+def health():
+    """Health check endpoint."""
+    return jsonify({'status': 'ok', 'static_folder': app.static_folder, 'exists': os.path.exists(app.static_folder)})
+
+
 @app.route('/')
 def index():
     """Serve the React app."""
+    if not os.path.exists(app.static_folder):
+        return jsonify({'error': 'Frontend not built', 'static_folder': app.static_folder}), 500
     return send_from_directory(app.static_folder, 'index.html')
 
 

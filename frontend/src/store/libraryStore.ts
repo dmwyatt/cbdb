@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Database } from 'sql.js';
 import {
   initializeSqlJs,
   createDatabase,
   validateDatabase,
+  type SqlJsDatabase,
 } from '@/lib/sql';
 import { downloadDatabase } from '@/lib/api';
 import { saveToCache, loadFromCache, clearCache } from '@/lib/indexeddb';
@@ -13,7 +13,7 @@ export type ViewMode = 'grid' | 'table';
 
 interface LibraryState {
   // Database state
-  db: Database | null;
+  db: SqlJsDatabase | null;
   isLoading: boolean;
   loadingProgress: number;
   loadingMessage: string;
@@ -143,7 +143,7 @@ export const useLibraryStore = create<LibraryState>()(
           set({ loadingProgress: 90, loadingMessage: 'Opening database...' });
 
           // Create database
-          let db: Database;
+          let db: SqlJsDatabase;
           try {
             db = createDatabase(dbData);
             if (!validateDatabase(db)) {

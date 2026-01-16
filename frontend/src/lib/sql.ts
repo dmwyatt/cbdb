@@ -1,5 +1,24 @@
-import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js';
 import type { Book, BookDetail, BooksResult, BookFormat } from '@/types/book';
+
+// Types for sql.js (loaded via CDN script tag in index.html)
+export interface SqlJsDatabase {
+  exec(sql: string): { columns: string[]; values: unknown[][] }[];
+  prepare(sql: string): SqlJsStatement;
+}
+
+interface SqlJsStatement {
+  bind(params: unknown[]): void;
+  step(): boolean;
+  get(): unknown[];
+  getAsObject(): Record<string, unknown>;
+  free(): void;
+}
+
+interface SqlJsStatic {
+  Database: new (data: Uint8Array) => SqlJsDatabase;
+}
+
+declare const initSqlJs: (config?: { locateFile?: (file: string) => string }) => Promise<SqlJsStatic>;
 
 let SQL: SqlJsStatic | null = null;
 
@@ -7,19 +26,19 @@ export async function initializeSqlJs(): Promise<SqlJsStatic> {
   if (SQL) return SQL;
 
   SQL = await initSqlJs({
-    locateFile: (file) =>
+    locateFile: (file: string) =>
       `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`,
   });
 
   return SQL;
 }
 
-export function createDatabase(data: Uint8Array): Database {
+export function createDatabase(data: Uint8Array): SqlJsDatabase {
   if (!SQL) throw new Error('sql.js not initialized');
   return new SQL.Database(data);
 }
 
-export function validateDatabase(db: Database): boolean {
+export function validateDatabase(db: SqlJsDatabase): boolean {
   try {
     db.exec('SELECT COUNT(*) FROM books');
     return true;
@@ -28,7 +47,7 @@ export function validateDatabase(db: Database): boolean {
   }
 }
 
-function resultToObjects<T>(result: ReturnType<Database['exec']>): T[] {
+function resultToObjects<T>(result: ReturnType<SqlJsDatabase['exec']>): T[] {
   if (!result.length) return [];
   const columns = result[0].columns;
   return result[0].values.map((row) => {
@@ -41,17 +60,15 @@ function resultToObjects<T>(result: ReturnType<Database['exec']>): T[] {
 }
 
 export function getBooks(
-  db: Database,
+  db: SqlJsDatabase,
   page: number,
   perPage: number
 ): BooksResult {
   const offset = (page - 1) * perPage;
 
-  // Get total count
   const countResult = db.exec('SELECT COUNT(*) as count FROM books');
   const total = countResult[0].values[0][0] as number;
 
-  // Get books with authors, series, ratings
   const query = `
     SELECT
       b.id,
@@ -81,7 +98,7 @@ export function getBooks(
 }
 
 export function searchBooks(
-  db: Database,
+  db: SqlJsDatabase,
   term: string,
   page: number,
   perPage: number
@@ -89,7 +106,6 @@ export function searchBooks(
   const offset = (page - 1) * perPage;
   const searchPattern = `%${term}%`;
 
-  // Get total count
   const countQuery = `
     SELECT COUNT(DISTINCT b.id) as count
     FROM books b
@@ -104,7 +120,6 @@ export function searchBooks(
   const total = countStmt.get()[0] as number;
   countStmt.free();
 
-  // Get books
   const query = `
     SELECT DISTINCT
       b.id,
@@ -140,8 +155,7 @@ export function searchBooks(
   return { books, total };
 }
 
-export function getBookDetail(db: Database, bookId: number): BookDetail | null {
-  // Get basic book info
+export function getBookDetail(db: SqlJsDatabase, bookId: number): BookDetail | null {
   const query = `
     SELECT
       b.id,
@@ -176,7 +190,6 @@ export function getBookDetail(db: Database, bookId: number): BookDetail | null {
     return null;
   }
 
-  // Get authors
   const authorsResult = db.exec(`
     SELECT a.name FROM authors a
     JOIN books_authors_link bal ON a.id = bal.author
@@ -186,7 +199,6 @@ export function getBookDetail(db: Database, bookId: number): BookDetail | null {
     ? (authorsResult[0].values.map((r) => r[0]) as string[])
     : [];
 
-  // Get tags
   const tagsResult = db.exec(`
     SELECT t.name FROM tags t
     JOIN books_tags_link btl ON t.id = btl.tag
@@ -196,7 +208,6 @@ export function getBookDetail(db: Database, bookId: number): BookDetail | null {
     ? (tagsResult[0].values.map((r) => r[0]) as string[])
     : [];
 
-  // Get formats
   const formatsResult = db.exec(`
     SELECT format, uncompressed_size, name FROM data
     WHERE book = ${bookId}
@@ -209,7 +220,6 @@ export function getBookDetail(db: Database, bookId: number): BookDetail | null {
       }))
     : [];
 
-  // Get identifiers
   const identifiersResult = db.exec(`
     SELECT type, val FROM identifiers
     WHERE book = ${bookId}
