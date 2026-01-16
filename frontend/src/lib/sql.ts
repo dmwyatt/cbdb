@@ -367,14 +367,6 @@ export function getBooksByFilters(
     ${whereClause}
   `;
 
-  const countStmt = db.prepare(countQuery);
-  if (params.length > 0) {
-    countStmt.bind(params);
-  }
-  countStmt.step();
-  const total = countStmt.get()[0] as number;
-  countStmt.free();
-
   // Main query - use string interpolation for LIMIT/OFFSET (safe since they're numbers)
   const query = `
     SELECT DISTINCT
@@ -401,8 +393,11 @@ export function getBooksByFilters(
     LIMIT ${perPage} OFFSET ${offset}
   `;
 
-  // If no filter params, use exec() for simpler execution
+  // If no filter params, use exec() for both queries (matching original getBooks pattern)
   if (params.length === 0) {
+    const countResult = db.exec(countQuery);
+    const total = countResult[0].values[0][0] as number;
+
     const result = db.exec(query);
     if (!result.length) return { books: [], total };
     const columns = result[0].columns;
@@ -416,7 +411,13 @@ export function getBooksByFilters(
     return { books, total };
   }
 
-  // Use prepared statement for filter params
+  // Use prepared statements when we have filter params
+  const countStmt = db.prepare(countQuery);
+  countStmt.bind(params);
+  countStmt.step();
+  const total = countStmt.get()[0] as number;
+  countStmt.free();
+
   const stmt = db.prepare(query);
   stmt.bind(params);
 
