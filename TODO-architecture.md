@@ -116,28 +116,6 @@ Current inconsistency:
 
 ---
 
-### Extract path normalization utility
-
-**Files**: `app.py` (3 places), `dropbox_api.py` (1 place)
-
-Same logic repeated 4 times:
-```python
-if not library_path.startswith("/"):
-    library_path = "/" + library_path
-library_path = library_path.rstrip("/")
-```
-
-**Solution**: Add to `dropbox_api.py`:
-```python
-def normalize_library_path(path: str) -> str:
-    """Ensure path starts with / and has no trailing slash."""
-    if not path.startswith("/"):
-        path = "/" + path
-    return path.rstrip("/")
-```
-
----
-
 ## Priority 3: Code Quality
 
 ### Create OfflineService for network status
@@ -180,7 +158,11 @@ Pagination spread across:
 
 ## Completed
 
-_Move items here when done_
+### Extract path normalization utility
+
+**Files**: `app.py` (3 places), `dropbox_api.py` (2 places)
+
+Added `normalize_library_path()` function to `dropbox_api.py` and replaced all 5 instances of duplicated normalization logic with calls to this function.
 
 ---
 

@@ -2,6 +2,13 @@ import os
 import requests
 
 
+def normalize_library_path(path: str) -> str:
+    """Ensure path starts with / and has no trailing slash."""
+    if not path.startswith("/"):
+        path = "/" + path
+    return path.rstrip("/")
+
+
 class DropboxAPI:
     """Interact with Dropbox API using an access token."""
 
@@ -206,11 +213,7 @@ class DropboxAPI:
         Raises:
             Exception with helpful message if path is invalid
         """
-        # Normalize path
-        if not library_path.startswith("/"):
-            library_path = "/" + library_path
-        library_path = library_path.rstrip("/")
-
+        library_path = normalize_library_path(library_path)
         metadata_path = f"{library_path}/metadata.db"
 
         # Check if metadata.db exists
@@ -364,10 +367,7 @@ class DropboxAPI:
         Returns:
             dict with sync info
         """
-        if not library_path.startswith("/"):
-            library_path = "/" + library_path
-        library_path = library_path.rstrip("/")
-
+        library_path = normalize_library_path(library_path)
         metadata_path = f"{library_path}/metadata.db"
 
         content = self.download_file(metadata_path)

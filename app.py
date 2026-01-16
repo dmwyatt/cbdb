@@ -1,7 +1,7 @@
 import os
 from functools import wraps
 from flask import Flask, request, jsonify, Response, send_from_directory
-from dropbox_api import DropboxAPI
+from dropbox_api import DropboxAPI, normalize_library_path
 
 # Serve React build from frontend/dist
 STATIC_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frontend', 'dist')
@@ -167,10 +167,7 @@ def download_db():
         }), 400
 
     try:
-        # Normalize path
-        if not library_path.startswith("/"):
-            library_path = "/" + library_path
-        library_path = library_path.rstrip("/")
+        library_path = normalize_library_path(library_path)
         metadata_path = f"{library_path}/metadata.db"
 
         # Download from Dropbox
@@ -231,10 +228,7 @@ def download_link():
         }), 400
 
     try:
-        # Normalize library path
-        if not library_path.startswith("/"):
-            library_path = "/" + library_path
-        library_path = library_path.rstrip("/")
+        library_path = normalize_library_path(library_path)
 
         # Build full path: library_path + book_path + filename
         full_path = f"{library_path}/{file_path}"
@@ -285,10 +279,7 @@ def get_covers():
     # Limit to 25 (Dropbox batch limit)
     book_paths = book_paths[:25]
 
-    # Normalize library path
-    if not library_path.startswith("/"):
-        library_path = "/" + library_path
-    library_path = library_path.rstrip("/")
+    library_path = normalize_library_path(library_path)
 
     # Build full cover paths
     cover_paths = [
