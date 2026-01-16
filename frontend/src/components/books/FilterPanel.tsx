@@ -101,7 +101,10 @@ export function FilterPanel() {
   };
 
   const handleSortFieldChange = (value: string) => {
-    setSort({ field: value as SortField });
+    const field = value as SortField;
+    // Default to descending for date added (newest first)
+    const order = field === 'timestamp' ? 'desc' : sort.order;
+    setSort({ field, order });
   };
 
   const handleSortOrderToggle = () => {
