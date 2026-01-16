@@ -25,32 +25,6 @@ Keep `loadDatabase()` as a thin orchestrator that delegates to these services.
 
 ---
 
-### Create QueryService for database queries
-
-**Files**: `frontend/src/components/books/Library.tsx`, `frontend/src/components/books/BookModal.tsx`
-
-Components call SQL functions directly with inline timing/error handling:
-```typescript
-// Library.tsx
-const startTime = performance.now();
-const result = searchBooks(db, ...);
-const queryTime = performance.now() - startTime;
-```
-
-**Solution**: Create `frontend/src/lib/queryService.ts`:
-```typescript
-class QueryService {
-  getBooks(page, perPage): Promise<BooksResult>
-  searchBooks(term, page, perPage): Promise<BooksResult>
-  getBookDetail(id): Promise<BookDetail>
-}
-```
-- Encapsulates timing/metrics
-- Consistent error handling
-- Single place for query optimization
-
----
-
 ## Priority 2: Design Issues
 
 ### Hide store internals behind action methods
@@ -136,6 +110,21 @@ Pagination spread across:
 ---
 
 ## Completed
+
+### Create QueryService for database queries
+
+**Files**: `frontend/src/components/books/Library.tsx`, `frontend/src/components/books/BookModal.tsx`
+
+Created `frontend/src/lib/queryService.ts` with a singleton `QueryService` class that:
+- Provides `getBooks()`, `searchBooks()`, `getBookDetail()`, and `queryBooks()` methods
+- Encapsulates timing/metrics collection (returns `queryTime` with every result)
+- Handles errors consistently with fallback to empty results
+- Is the single source of truth for database queries
+
+Updated `libraryStore.ts` to set the database on `queryService` when loaded/reset.
+Updated `Library.tsx` and `BookModal.tsx` to use the service instead of direct SQL calls with inline timing.
+
+---
 
 ### Create unified CoverService
 

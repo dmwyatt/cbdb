@@ -7,7 +7,7 @@ import { Pagination } from './Pagination';
 import { StatusBar } from '@/components/layout/StatusBar';
 import { useLibraryStore } from '@/store/libraryStore';
 import { useDebounce } from '@/hooks/useDebounce';
-import { getBooks, searchBooks } from '@/lib/sql';
+import { queryService } from '@/lib/queryService';
 
 export function Library() {
   const navigate = useNavigate();
@@ -22,16 +22,14 @@ export function Library() {
 
   const debouncedSearchTerm = useDebounce(searchTerm, 150);
 
+  // Use queryService for all database queries - it handles timing and error handling
   const { books, total, queryTime } = useMemo(() => {
-    if (!db) return { books: [], total: 0, queryTime: 0 };
-
-    const startTime = performance.now();
-    const result = debouncedSearchTerm
-      ? searchBooks(db, debouncedSearchTerm, currentPage, perPage)
-      : getBooks(db, currentPage, perPage);
-    const queryTime = performance.now() - startTime;
-
-    return { ...result, queryTime };
+    const result = queryService.queryBooks(debouncedSearchTerm, currentPage, perPage);
+    return {
+      books: result.data.books,
+      total: result.data.total,
+      queryTime: result.queryTime,
+    };
   }, [db, debouncedSearchTerm, currentPage, perPage]);
 
   const totalPages = Math.ceil(total / perPage);

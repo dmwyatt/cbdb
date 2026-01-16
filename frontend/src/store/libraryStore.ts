@@ -8,6 +8,7 @@ import {
 } from '@/lib/sql';
 import { downloadDatabase } from '@/lib/api';
 import { saveToCache, loadFromCache, clearCache, getCacheTimestamp } from '@/lib/indexeddb';
+import { queryService } from '@/lib/queryService';
 
 export type ViewMode = 'grid' | 'table';
 
@@ -169,6 +170,7 @@ export const useLibraryStore = create<LibraryState>()(
             );
           }
 
+          queryService.setDatabase(db);
           set({
             db,
             dbSize: dbData.length,
@@ -186,6 +188,9 @@ export const useLibraryStore = create<LibraryState>()(
           // Always clear loading state
           // IMPORTANT: Never reset db during refresh (forceRefresh=true) to prevent
           // the useEffect in App.tsx from re-triggering loadDatabase in a loop
+          if (!forceRefresh) {
+            queryService.setDatabase(null);
+          }
           set({
             isLoading: false,
             loadingProgress: 0,
@@ -223,6 +228,7 @@ export const useLibraryStore = create<LibraryState>()(
 
       resetLibrary: async () => {
         await clearCache();
+        queryService.setDatabase(null);
         set({
           db: null,
           libraryPath: null,
