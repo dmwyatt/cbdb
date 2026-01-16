@@ -10,8 +10,7 @@ import { StarRating } from '@/components/common/StarRating';
 import { DownloadButton } from './DownloadButton';
 import { useLibraryStore } from '@/store/libraryStore';
 import { getBookDetail } from '@/lib/sql';
-import { fetchCovers } from '@/lib/api';
-import { getCachedCovers, saveCachedCovers } from '@/lib/indexeddb';
+import { coverService } from '@/lib/coverService';
 import type { BookDetail } from '@/types/book';
 
 export function BookModal() {
@@ -34,25 +33,14 @@ export function BookModal() {
 
     // Fetch cover if available
     if (detail?.has_cover && libraryPath) {
-      const loadCover = async () => {
-        // Check cache first
-        const cached = await getCachedCovers([detail.path]);
-        if (cached[detail.path]) {
-          setCoverUrl(cached[detail.path]);
-          return;
+      coverService.setLibraryPath(libraryPath);
+      coverService.getCover(detail.path).then((cover) => {
+        if (cover) {
+          setCoverUrl(cover);
         }
-        // Fetch from server
-        try {
-          const covers = await fetchCovers(libraryPath, [detail.path]);
-          if (covers[detail.path]) {
-            setCoverUrl(covers[detail.path]);
-            await saveCachedCovers(covers);
-          }
-        } catch (e) {
-          console.error('Failed to fetch cover:', e);
-        }
-      };
-      loadCover();
+      }).catch((e) => {
+        console.error('Failed to fetch cover:', e);
+      });
     } else {
       setCoverUrl(null);
     }

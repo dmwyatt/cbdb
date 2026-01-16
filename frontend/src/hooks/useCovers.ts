@@ -1,16 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLibraryStore } from '@/store/libraryStore';
-import { fetchCovers } from '@/lib/api';
-import { getCachedCovers, saveCachedCovers } from '@/lib/indexeddb';
+import { coverService } from '@/lib/coverService';
 import type { Book } from '@/types/book';
-
-const BATCH_SIZE = 25;
 
 export function useCovers(books: Book[]) {
   const [covers, setCovers] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const libraryPath = useLibraryStore((s) => s.libraryPath);
   const fetchedRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    coverService.setLibraryPath(libraryPath);
+  }, [libraryPath]);
 
   useEffect(() => {
     if (!books.length || !libraryPath) return;
@@ -29,31 +30,13 @@ export function useCovers(books: Book[]) {
       setLoading(true);
 
       try {
-        // 1. Check cache first
-        const cached = await getCachedCovers(pathsToFetch);
-        if (Object.keys(cached).length > 0) {
-          setCovers((prev) => ({ ...prev, ...cached }));
-        }
-
-        // 2. Find uncached paths
-        const uncached = pathsToFetch.filter((p) => !cached[p]);
-        if (!uncached.length) {
-          setLoading(false);
-          return;
-        }
-
-        // 3. Fetch uncached in batches of 25
-        for (let i = 0; i < uncached.length; i += BATCH_SIZE) {
-          const batch = uncached.slice(i, i + BATCH_SIZE);
-          try {
-            const fetched = await fetchCovers(libraryPath, batch);
-            if (Object.keys(fetched).length > 0) {
-              setCovers((prev) => ({ ...prev, ...fetched }));
-              await saveCachedCovers(fetched);
-            }
-          } catch (e) {
-            console.error('Failed to fetch covers batch:', e);
-          }
+        const results = await coverService.getCovers(pathsToFetch);
+        const newCovers: Record<string, string> = {};
+        results.forEach((value, key) => {
+          newCovers[key] = value;
+        });
+        if (Object.keys(newCovers).length > 0) {
+          setCovers((prev) => ({ ...prev, ...newCovers }));
         }
       } catch (e) {
         console.error('Failed to load covers:', e);

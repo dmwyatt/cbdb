@@ -25,27 +25,6 @@ Keep `loadDatabase()` as a thin orchestrator that delegates to these services.
 
 ---
 
-### Create unified CoverService
-
-**Files**: `frontend/src/hooks/useCovers.ts`, `frontend/src/components/books/BookModal.tsx`
-
-Cover fetching logic is duplicated:
-- `useCovers` hook: cache check → batch fetch (25 items) → save
-- `BookModal`: cache check → single fetch → save (no batching)
-
-**Solution**: Create `frontend/src/lib/coverService.ts`:
-```typescript
-class CoverService {
-  async getCovers(paths: string[]): Promise<Map<string, string>>
-  async getCover(path: string): Promise<string | null>
-}
-```
-- Handles caching internally
-- Batches requests automatically
-- Single source of truth for cover logic
-
----
-
 ### Create QueryService for database queries
 
 **Files**: `frontend/src/components/books/Library.tsx`, `frontend/src/components/books/BookModal.tsx`
@@ -157,6 +136,21 @@ Pagination spread across:
 ---
 
 ## Completed
+
+### Create unified CoverService
+
+**Files**: `frontend/src/hooks/useCovers.ts`, `frontend/src/components/books/BookModal.tsx`
+
+Created `frontend/src/lib/coverService.ts` with a singleton `CoverService` class that:
+- Provides `getCovers(paths: string[])` and `getCover(path: string)` methods
+- Handles caching internally via IndexedDB
+- Batches requests automatically (25 items per batch)
+- Tracks pending fetches to prevent duplicate requests
+- Is the single source of truth for cover logic
+
+Updated `useCovers.ts` and `BookModal.tsx` to use the service instead of duplicating cache/fetch logic.
+
+---
 
 ### Extract path normalization utility
 
