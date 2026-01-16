@@ -126,6 +126,35 @@ No automated test framework yet. Manual testing areas:
 - `FLASK_DEBUG` - Optional, enables debug mode
 - `PORT` - Optional, default 5000
 
+## Documentation
+
+### Keeping README.md Up to Date
+
+Update `README.md` when making significant changes to the codebase. The README is user-facing documentation and should accurately reflect the current state of the project.
+
+**Update README.md when:**
+- Adding, removing, or changing API endpoints
+- Modifying the project structure (new directories, renamed files)
+- Changing the tech stack (new dependencies, frameworks, or tools)
+- Altering the build process or development workflow
+- Adding new features that users should know about
+- Changing environment variables or configuration options
+
+**What to update:**
+- API Endpoints table
+- Project Structure tree
+- Tech Stack section
+- Local Development instructions
+- Environment Variables table
+- Features list
+- Troubleshooting section (if relevant)
+
+**Do not update README.md for:**
+- Internal refactoring that doesn't change external behavior
+- Bug fixes that don't affect usage
+- Minor dependency updates
+- Code style changes
+
 ## Architecture Notes
 
 - Server proxies Dropbox API (keeps token secure)
