@@ -11,5 +11,5 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt gunicorn
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 COPY app.py dropbox_api.py ./
-EXPOSE 5000
-CMD ["gunicorn", "--timeout", "120", "--bind", "0.0.0.0:5000", "app:app"]
+ENV PORT=5000
+CMD gunicorn --timeout 120 --bind 0.0.0.0:$PORT app:app
