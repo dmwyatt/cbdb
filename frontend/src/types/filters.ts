@@ -10,7 +10,7 @@ export interface BookFilters {
   format: string | null;
 }
 
-export type SortField = 'title' | 'author' | 'pubdate' | 'rating' | 'series_index';
+export type SortField = 'title' | 'author' | 'pubdate' | 'rating' | 'series_index' | 'timestamp';
 export type SortOrder = 'asc' | 'desc';
 
 export interface SortOptions {

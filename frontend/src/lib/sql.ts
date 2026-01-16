@@ -350,6 +350,9 @@ export function getBooksByFilters(
     case 'series_index':
       orderBy = `s.name ${orderDirection}, b.series_index ${orderDirection}`;
       break;
+    case 'timestamp':
+      orderBy = `b.timestamp ${orderDirection}`;
+      break;
     default:
       orderBy = `b.sort ${orderDirection}`;
   }

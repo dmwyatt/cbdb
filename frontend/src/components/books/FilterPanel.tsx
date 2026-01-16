@@ -41,6 +41,7 @@ const SORT_OPTIONS: { value: SortField; label: string }[] = [
   { value: 'rating', label: 'Rating' },
   { value: 'pubdate', label: 'Publication Date' },
   { value: 'series_index', label: 'Series Order' },
+  { value: 'timestamp', label: 'Date Added' },
 ];
 
 const RATING_OPTIONS = [
