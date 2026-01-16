@@ -156,6 +156,35 @@ No automated test framework yet. Manual testing areas:
 3. Update TypeScript types in `frontend/src/types/book.ts`
 4. Test query performance in browser DevTools
 
+### Debugging SQL queries with Node.js
+If SQL queries fail silently or return unexpected results, you can test them locally with the actual database:
+
+1. Get a Dropbox share link to the metadata.db file from the user
+2. Download the database and test with Node.js + sql.js:
+
+```javascript
+// test-query.js
+const initSqlJs = require('sql.js');
+const fs = require('fs');
+
+async function test() {
+  const SQL = await initSqlJs();
+  const db = new SQL.Database(fs.readFileSync('metadata.db'));
+
+  try {
+    const result = db.exec(`YOUR QUERY HERE`);
+    console.log(result);
+  } catch (e) {
+    console.error('Query error:', e.message);
+  }
+}
+test();
+```
+
+3. Run: `npm install sql.js && node test-query.js`
+
+This catches SQL syntax errors that may be silently caught in the browser. Remember to delete test files before committing.
+
 ### Adding a new component
 1. Create component in appropriate `frontend/src/components/` subdirectory
 2. Use shadcn/ui primitives where possible
