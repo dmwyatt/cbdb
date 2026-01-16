@@ -7,7 +7,7 @@ import {
   type SqlJsDatabase,
 } from '@/lib/sql';
 import { downloadDatabase } from '@/lib/api';
-import { saveToCache, loadFromCache, clearCache } from '@/lib/indexeddb';
+import { saveToCache, loadFromCache, clearCache, getCacheTimestamp } from '@/lib/indexeddb';
 
 export type ViewMode = 'grid' | 'table';
 
@@ -20,6 +20,7 @@ interface LibraryState {
   error: string | null;
   loadedFromCache: boolean;
   dbSize: number;
+  lastSyncTime: number | null;
 
   // Library configuration (persisted)
   libraryPath: string | null;
@@ -64,6 +65,7 @@ export const useLibraryStore = create<LibraryState>()(
       error: null,
       loadedFromCache: false,
       dbSize: 0,
+      lastSyncTime: null,
       libraryPath: null,
       currentView: 'grid',
       currentPage: 1,
@@ -97,12 +99,15 @@ export const useLibraryStore = create<LibraryState>()(
 
           let dbData: Uint8Array | null = null;
 
+          let syncTime: number | null = null;
+
           // Try to load from cache first (unless forcing refresh)
           if (!forceRefresh) {
             set({ loadingMessage: 'Checking cache...' });
             try {
               dbData = await loadFromCache(libraryPath);
               if (dbData) {
+                syncTime = await getCacheTimestamp();
                 set({
                   loadedFromCache: true,
                   loadingMessage: 'Loading from cache...',
@@ -140,8 +145,10 @@ export const useLibraryStore = create<LibraryState>()(
                 await clearCache();
               }
               await saveToCache(dbData, libraryPath);
+              syncTime = Date.now();
             } catch (cacheError) {
               console.warn('Failed to cache database:', cacheError);
+              syncTime = Date.now(); // Still track sync time even if caching fails
             }
           }
 
@@ -170,6 +177,7 @@ export const useLibraryStore = create<LibraryState>()(
           set({
             db,
             dbSize: dbData.length,
+            lastSyncTime: syncTime,
             isLoading: false,
             loadingProgress: 100,
             loadingMessage: '',

@@ -9,8 +9,25 @@ interface StatusBarProps {
   queryTime?: number;
 }
 
+function formatSyncTime(timestamp: number | null): string {
+  if (!timestamp) return '';
+
+  const now = Date.now();
+  const diff = now - timestamp;
+
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days}d ago`;
+  if (hours > 0) return `${hours}h ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return 'just now';
+}
+
 export function StatusBar({ queryTime }: StatusBarProps) {
-  const { loadedFromCache, dbSize, refreshDatabase } = useLibraryStore();
+  const { loadedFromCache, dbSize, lastSyncTime, refreshDatabase } = useLibraryStore();
   const isOnline = useOnlineStatus();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -41,6 +58,9 @@ export function StatusBar({ queryTime }: StatusBarProps) {
         <span>Database loaded ({formatBytes(dbSize)})</span>
       </div>
       <div className="flex items-center gap-4">
+        {lastSyncTime && (
+          <span className="text-gray-400 text-xs">Synced: {formatSyncTime(lastSyncTime)}</span>
+        )}
         {queryTime !== undefined && (
           <span className="text-gray-400 text-xs">Query: {queryTime.toFixed(1)}ms</span>
         )}
