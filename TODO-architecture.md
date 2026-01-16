@@ -1,0 +1,192 @@
+# Architecture Improvements
+
+Tracked improvements to establish clearer boundaries between layers and components.
+
+## Priority 1: Critical
+
+### Extract DatabaseService from `libraryStore.loadDatabase()`
+
+**File**: `frontend/src/store/libraryStore.ts`
+
+The `loadDatabase()` method is 116 lines mixing 6+ concerns:
+- State management
+- SQL.js initialization
+- Cache orchestration
+- API coordination
+- Validation logic
+- Error recovery with retry
+
+**Solution**: Extract into separate services:
+- `DatabaseInitializer` - SQL.js setup
+- `CacheManager` - cache operations
+- `DatabaseValidator` - validation logic
+
+Keep `loadDatabase()` as a thin orchestrator that delegates to these services.
+
+---
+
+### Create unified CoverService
+
+**Files**: `frontend/src/hooks/useCovers.ts`, `frontend/src/components/books/BookModal.tsx`
+
+Cover fetching logic is duplicated:
+- `useCovers` hook: cache check → batch fetch (25 items) → save
+- `BookModal`: cache check → single fetch → save (no batching)
+
+**Solution**: Create `frontend/src/lib/coverService.ts`:
+```typescript
+class CoverService {
+  async getCovers(paths: string[]): Promise<Map<string, string>>
+  async getCover(path: string): Promise<string | null>
+}
+```
+- Handles caching internally
+- Batches requests automatically
+- Single source of truth for cover logic
+
+---
+
+### Create QueryService for database queries
+
+**Files**: `frontend/src/components/books/Library.tsx`, `frontend/src/components/books/BookModal.tsx`
+
+Components call SQL functions directly with inline timing/error handling:
+```typescript
+// Library.tsx
+const startTime = performance.now();
+const result = searchBooks(db, ...);
+const queryTime = performance.now() - startTime;
+```
+
+**Solution**: Create `frontend/src/lib/queryService.ts`:
+```typescript
+class QueryService {
+  getBooks(page, perPage): Promise<BooksResult>
+  searchBooks(term, page, perPage): Promise<BooksResult>
+  getBookDetail(id): Promise<BookDetail>
+}
+```
+- Encapsulates timing/metrics
+- Consistent error handling
+- Single place for query optimization
+
+---
+
+## Priority 2: Design Issues
+
+### Hide store internals behind action methods
+
+**Files**: Multiple components directly access store fields
+
+Current pattern (tight coupling):
+```typescript
+const { db, searchTerm, setSearchTerm, resetLibrary } = useLibraryStore();
+```
+
+Components depend on store shape. If store structure changes, all components break.
+
+**Solution**: Expose query methods instead of fields:
+```typescript
+// Instead of exposing `db` field
+useLibraryStore.getState().executeQuery(...)
+
+// Instead of exposing `searchTerm` + `setSearchTerm`
+const searchTerm = useLibraryStore(state => state.searchTerm);
+const updateSearch = useLibraryStore(state => state.actions.updateSearch);
+```
+
+Consider splitting into multiple stores or using selectors.
+
+---
+
+### Unify error handling patterns
+
+**Files**: Throughout frontend
+
+Current inconsistency:
+- `SetupForm`: calls `store.setError()`
+- `DownloadButton`: catches and calls `store.setError()`
+- `BookModal`: silently swallows cover fetch errors
+- Various: `console.error()` only
+
+**Solution**:
+1. Create error handling strategy (which errors show to users vs log only)
+2. Create `ErrorService` or use React Error Boundary
+3. Document pattern in AGENTS.md
+
+---
+
+### Extract path normalization utility
+
+**Files**: `app.py` (3 places), `dropbox_api.py` (1 place)
+
+Same logic repeated 4 times:
+```python
+if not library_path.startswith("/"):
+    library_path = "/" + library_path
+library_path = library_path.rstrip("/")
+```
+
+**Solution**: Add to `dropbox_api.py`:
+```python
+def normalize_library_path(path: str) -> str:
+    """Ensure path starts with / and has no trailing slash."""
+    if not path.startswith("/"):
+        path = "/" + path
+    return path.rstrip("/")
+```
+
+---
+
+## Priority 3: Code Quality
+
+### Create OfflineService for network status
+
+**Files**: Multiple `navigator.onLine` checks scattered
+
+**Solution**: Create service that:
+- Tracks online/offline status
+- Emits events on status change
+- Provides consistent offline handling
+
+---
+
+### Add type safety for library path
+
+**Files**: Throughout - `libraryPath` is a plain string everywhere
+
+**Solution**: Consider branded type or wrapper:
+```typescript
+type LibraryPath = string & { readonly brand: unique symbol };
+function createLibraryPath(path: string): LibraryPath;
+```
+
+Low priority - current approach works, just less type-safe.
+
+---
+
+### Consolidate pagination logic
+
+**Files**: `libraryStore.ts`, `Library.tsx`, `lib/sql.ts`
+
+Pagination spread across:
+- Store: `currentPage`, `perPage`
+- Component: `totalPages` calculation
+- SQL: pagination in query
+
+**Solution**: Create pagination utility or keep in one place.
+
+---
+
+## Completed
+
+_Move items here when done_
+
+---
+
+## Notes
+
+- Backend architecture (app.py ↔ dropbox_api.py) is already well-separated
+- Frontend folder structure is good; issues are in data flow and responsibilities
+- AGENTS.md covers practical development tasks well
+- This document tracks structural improvements, not feature work
