@@ -2,11 +2,9 @@ import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StarRating } from '@/components/common/StarRating';
 import { DownloadButton } from './DownloadButton';
@@ -162,13 +160,6 @@ export function BookModal() {
                 Query time: {queryTime.toFixed(1)}ms
               </p>
             </div>
-
-            {/* Mobile-friendly close button - visible on small screens where browser chrome may obscure the X button */}
-            <DialogFooter className="sm:hidden mt-4 pt-4 border-t">
-              <Button variant="outline" onClick={handleClose} className="w-full">
-                Close
-              </Button>
-            </DialogFooter>
           </>
         )}
       </DialogContent>
