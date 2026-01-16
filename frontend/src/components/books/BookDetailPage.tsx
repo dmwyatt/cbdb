@@ -10,60 +10,24 @@ import { queryService } from '@/lib/queryService';
 import { coverService } from '@/lib/coverService';
 import type { BookDetail } from '@/types/book';
 
-interface StickyHeaderProps {
-  visible: boolean;
-  title: string;
-  coverUrl: string | null;
-  hasCover: boolean;
-  onBack: () => void;
-}
+// Animation constants
+const SCROLL_DISTANCE = 150; // pixels to scroll for full collapse
+const HEADER_HEIGHT_EXPANDED = 300; // height when expanded (cover + title + padding)
+const HEADER_HEIGHT_COLLAPSED = 56; // height when collapsed
 
-function StickyHeader({ visible, title, coverUrl, hasCover, onBack }: StickyHeaderProps) {
-  return (
-    <div
-      className={`fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-b border-slate-200 shadow-sm transition-all duration-300 ease-out ${
-        visible
-          ? 'translate-y-0 opacity-100'
-          : '-translate-y-full opacity-0 pointer-events-none'
-      }`}
-    >
-      <div className="container mx-auto px-4">
-        <div className="flex items-center gap-3 h-14">
-          {/* Back button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className="text-slate-600 hover:text-slate-900 -ml-2 shrink-0"
-          >
-            <ArrowLeftIcon className="h-4 w-4" />
-            <span className="sr-only">Back</span>
-          </Button>
+// Cover dimensions
+const COVER_EXPANDED = { width: 120, height: 168 };
+const COVER_COLLAPSED = { width: 32, height: 44 };
 
-          {/* Cover thumbnail */}
-          <div className="w-8 h-11 bg-slate-100 rounded overflow-hidden shrink-0 flex items-center justify-center">
-            {coverUrl ? (
-              <img
-                src={`data:image/jpeg;base64,${coverUrl}`}
-                alt=""
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-sm text-slate-400">
-                {hasCover ? '...' : '📚'}
-              </span>
-            )}
-          </div>
+// Title font sizes (in pixels)
+const TITLE_SIZE_EXPANDED = 24;
+const TITLE_SIZE_COLLAPSED = 14;
 
-          {/* Title */}
-          <h2 className="font-semibold text-slate-900 truncate text-sm sm:text-base">
-            {title}
-          </h2>
-        </div>
-      </div>
-    </div>
-  );
-}
+// Layout positions
+const BACK_BUTTON_WIDTH = 40;
+
+// Linear interpolation helper
+const lerp = (start: number, end: number, t: number) => start + (end - start) * t;
 
 export function BookDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -72,32 +36,28 @@ export function BookDetailPage() {
   const [book, setBook] = useState<BookDetail | null>(null);
   const [queryTime, setQueryTime] = useState<number>(0);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
-  const [showStickyHeader, setShowStickyHeader] = useState(false);
-  const titleRef = useRef<HTMLHeadingElement>(null);
+  const [scrollY, setScrollY] = useState(0);
+  const headerRef = useRef<HTMLDivElement>(null);
 
-  // Intersection Observer to detect when title scrolls out of view
+  // Track scroll position
   useEffect(() => {
-    const titleElement = titleRef.current;
-    if (!titleElement) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        // Show sticky header when title is not visible
-        setShowStickyHeader(!entry.isIntersecting);
-      },
-      {
-        // Trigger when title fully exits viewport at top
-        threshold: 0,
-        rootMargin: '-10px 0px 0px 0px',
-      }
-    );
-
-    observer.observe(titleElement);
-
-    return () => {
-      observer.disconnect();
+    const handleScroll = () => {
+      setScrollY(window.scrollY);
     };
-  }, [book]); // Re-run when book loads
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Calculate animation progress (0 = expanded, 1 = collapsed)
+  const progress = Math.min(1, Math.max(0, scrollY / SCROLL_DISTANCE));
+  const isCollapsed = progress >= 1;
+
+  // Interpolated values
+  const headerHeight = lerp(HEADER_HEIGHT_EXPANDED, HEADER_HEIGHT_COLLAPSED, progress);
+  const coverWidth = lerp(COVER_EXPANDED.width, COVER_COLLAPSED.width, progress);
+  const coverHeight = lerp(COVER_EXPANDED.height, COVER_COLLAPSED.height, progress);
+  const titleSize = lerp(TITLE_SIZE_EXPANDED, TITLE_SIZE_COLLAPSED, progress);
 
   useEffect(() => {
     if (!db || !id) {
@@ -153,47 +113,93 @@ export function BookDetailPage() {
 
   return (
     <>
-      {/* Sticky header that appears when scrolling */}
-      <StickyHeader
-        visible={showStickyHeader}
-        title={book.title}
-        coverUrl={coverUrl}
-        hasCover={book.has_cover}
-        onBack={handleBack}
-      />
+      {/* Morphing header - always sticky, elements animate inside */}
+      <div
+        ref={headerRef}
+        className={`sticky top-0 bg-white/95 backdrop-blur-sm z-50 transition-shadow duration-200 ${
+          isCollapsed ? 'shadow-sm border-b border-slate-200' : ''
+        }`}
+        style={{ height: headerHeight }}
+      >
+        <div className="container mx-auto px-4 h-full">
+          <div className="relative h-full flex items-center">
+            {/* Back button - positioned absolutely, moves up as we scroll */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="text-slate-600 hover:text-slate-900 -ml-2 shrink-0 z-10 absolute"
+              style={{
+                top: lerp(16, (HEADER_HEIGHT_COLLAPSED - 32) / 2, progress),
+                left: 0,
+              }}
+            >
+              <ArrowLeftIcon className="h-4 w-4" />
+              <span
+                className="ml-2 overflow-hidden whitespace-nowrap"
+                style={{
+                  maxWidth: progress > 0.3 ? 0 : 40,
+                  opacity: 1 - progress * 2,
+                  transition: 'max-width 150ms ease-out',
+                }}
+              >
+                Back
+              </span>
+            </Button>
+
+            {/* Cover image - morphs from large centered to small in header */}
+            <div
+              className="bg-slate-100 rounded overflow-hidden flex items-center justify-center shrink-0 absolute"
+              style={{
+                width: coverWidth,
+                height: coverHeight,
+                left: lerp(0, BACK_BUTTON_WIDTH, progress),
+                top: lerp(56, (HEADER_HEIGHT_COLLAPSED - coverHeight) / 2, progress),
+              }}
+            >
+              {coverUrl ? (
+                <img
+                  src={`data:image/jpeg;base64,${coverUrl}`}
+                  alt={book.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <span
+                  className="text-slate-400 transition-none"
+                  style={{ fontSize: lerp(40, 14, progress) }}
+                >
+                  {book.has_cover ? '...' : '📚'}
+                </span>
+              )}
+            </div>
+
+            {/* Title - morphs from large below cover to small in header */}
+            <h1
+              className="font-bold text-slate-900 absolute"
+              style={{
+                fontSize: titleSize,
+                left: lerp(0, BACK_BUTTON_WIDTH + COVER_COLLAPSED.width + 12, progress),
+                top: lerp(56 + COVER_EXPANDED.height + 16, (HEADER_HEIGHT_COLLAPSED - titleSize * 1.2) / 2, progress),
+                right: 16,
+                lineHeight: 1.2,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: progress > 0.8 ? 'nowrap' : 'normal',
+                display: '-webkit-box',
+                WebkitLineClamp: progress > 0.5 ? 1 : 2,
+                WebkitBoxOrient: 'vertical',
+              }}
+            >
+              {book.title}
+            </h1>
+          </div>
+        </div>
+      </div>
 
       <main className="container mx-auto px-4 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
-        {/* Back button */}
-        <Button
-          variant="ghost"
-          onClick={handleBack}
-          className="mb-4 -ml-2 text-slate-600 hover:text-slate-900"
-        >
-          <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-
-        {/* Title */}
-        <h1 ref={titleRef} className="text-3xl font-bold text-slate-900 mb-6">{book.title}</h1>
-
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row gap-6">
-          {/* Cover image */}
-          <div className="w-40 h-56 bg-slate-100 rounded flex-shrink-0 flex items-center justify-center overflow-hidden mx-auto sm:mx-0">
-            {coverUrl ? (
-              <img
-                src={`data:image/jpeg;base64,${coverUrl}`}
-                alt={book.title}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-5xl text-slate-400">
-                {book.has_cover ? '...' : '📚'}
-              </span>
-            )}
-          </div>
-
-          {/* Book info */}
+          {/* Book info - no cover here anymore, it's in the header */}
           <div className="space-y-3 flex-1">
             {book.authors.length > 0 && (
               <p className="text-lg">
