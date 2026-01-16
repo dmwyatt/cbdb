@@ -42,6 +42,7 @@ interface LibraryState {
   setPage: (page: number) => void;
   setSelectedBookId: (id: number | null) => void;
   resetLibrary: () => Promise<void>;
+  setError: (error: string) => void;
   clearError: () => void;
 }
 
@@ -74,11 +75,14 @@ export const useLibraryStore = create<LibraryState>()(
       },
 
       loadDatabase: async (forceRefresh = false) => {
-        const { libraryPath } = get();
+        const { libraryPath, db: existingDb } = get();
         if (!libraryPath) {
           set({ error: 'Library path not configured' });
           return;
         }
+
+        // Track if this is a refresh of an existing database
+        const isRefresh = forceRefresh && existingDb !== null;
 
         set({
           isLoading: true,
@@ -95,7 +99,7 @@ export const useLibraryStore = create<LibraryState>()(
 
           let dbData: Uint8Array | null = null;
 
-          // Try to load from cache first
+          // Try to load from cache first (unless forcing refresh)
           if (!forceRefresh) {
             set({ loadingMessage: 'Checking cache...' });
             try {
@@ -131,9 +135,12 @@ export const useLibraryStore = create<LibraryState>()(
 
             set({ loadingProgress: 60, loadingMessage: 'Processing database...' });
 
-            // Cache in IndexedDB
+            // Clear old cache and save new data (only after successful download)
             set({ loadingProgress: 80, loadingMessage: 'Caching for offline use...' });
             try {
+              if (forceRefresh) {
+                await clearCache();
+              }
               await saveToCache(dbData, libraryPath);
             } catch (cacheError) {
               console.warn('Failed to cache database:', cacheError);
@@ -172,13 +179,27 @@ export const useLibraryStore = create<LibraryState>()(
           });
         } catch (error) {
           console.error('Failed to load database:', error);
-          set({
-            isLoading: false,
-            loadingProgress: 0,
-            loadingMessage: '',
-            error: error instanceof Error ? error.message : 'Failed to load database',
-            db: null,
-          });
+          const errorMessage = error instanceof Error ? error.message : 'Failed to load database';
+
+          if (isRefresh && existingDb) {
+            // Refresh failed but we have an existing database - preserve it
+            set({
+              isLoading: false,
+              loadingProgress: 0,
+              loadingMessage: '',
+              error: errorMessage,
+              // Keep existing db - don't set to null
+            });
+          } else {
+            // Initial load failed - no existing db to preserve
+            set({
+              isLoading: false,
+              loadingProgress: 0,
+              loadingMessage: '',
+              error: errorMessage,
+              db: null,
+            });
+          }
         }
       },
 
@@ -191,7 +212,7 @@ export const useLibraryStore = create<LibraryState>()(
           return;
         }
 
-        await clearCache();
+        // Don't clear cache before download - loadDatabase will handle it on success
         await get().loadDatabase(true);
       },
 
@@ -221,6 +242,10 @@ export const useLibraryStore = create<LibraryState>()(
           searchTerm: '',
           selectedBookId: null,
         });
+      },
+
+      setError: (error) => {
+        set({ error });
       },
 
       clearError: () => {

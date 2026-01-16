@@ -12,11 +12,11 @@ interface DownloadButtonProps {
 
 export function DownloadButton({ format, bookPath }: DownloadButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const { libraryPath } = useLibraryStore();
+  const { libraryPath, setError } = useLibraryStore();
 
   const handleDownload = async () => {
     if (!libraryPath) {
-      alert('Library path not configured');
+      setError('Library path not configured');
       return;
     }
 
@@ -27,7 +27,7 @@ export function DownloadButton({ format, bookPath }: DownloadButtonProps) {
       window.open(link, '_blank');
     } catch (error) {
       console.error('Download failed:', error);
-      alert('Download failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      setError('Download failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsLoading(false);
     }

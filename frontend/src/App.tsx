@@ -4,10 +4,11 @@ import { Footer } from '@/components/layout/Footer';
 import { SetupForm } from '@/components/setup/SetupForm';
 import { Library } from '@/components/books/Library';
 import { LoadingOverlay } from '@/components/common/LoadingOverlay';
+import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { useLibraryStore } from '@/store/libraryStore';
 
 function App() {
-  const { db, libraryPath, isLoading, loadingMessage, loadingProgress, loadDatabase } =
+  const { db, libraryPath, isLoading, loadingMessage, loadingProgress, error, loadDatabase, clearError } =
     useLibraryStore();
 
   // Auto-load database if we have a saved library path
@@ -30,6 +31,11 @@ function App() {
 
       {showSetup && <SetupForm />}
       {showLibrary && <Library />}
+
+      {/* Show error dialog for refresh failures (when db still exists) */}
+      {showLibrary && error && (
+        <ErrorAlert error={error} onDismiss={clearError} />
+      )}
 
       <Footer />
     </div>
