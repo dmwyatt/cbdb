@@ -7,13 +7,14 @@ import { Library } from '@/components/books/Library';
 import { BookDetailPage } from '@/components/books/BookDetailPage';
 import { LoadingOverlay } from '@/components/common/LoadingOverlay';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
+import { DropboxErrorBanner } from '@/components/common/DropboxErrorBanner';
 import { LoginForm } from '@/components/auth/LoginForm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLibraryStore } from '@/store/libraryStore';
 import { useAuthStore } from '@/store/authStore';
 
 function App() {
-  const { db, libraryPath, isLoading, loadingMessage, loadingProgress, error, loadDatabase, clearError, cancelLoading } =
+  const { db, libraryPath, isLoading, loadingMessage, loadingProgress, error, dropboxError, loadDatabase, clearError, clearDropboxError, cancelLoading } =
     useLibraryStore();
   const { authRequired, isAuthenticated, isMisconfigured, isCheckingAuth, error: authError, checkAuth } = useAuthStore();
 
@@ -92,6 +93,9 @@ function App() {
     <BrowserRouter>
       <div className="min-h-screen flex flex-col bg-slate-50">
         <Header />
+
+        {/* Dropbox auth error banner */}
+        <DropboxErrorBanner error={dropboxError} onDismiss={clearDropboxError} />
 
         {isLoading && !error && (
           <LoadingOverlay message={loadingMessage} progress={loadingProgress} onCancel={cancelLoading} />

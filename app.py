@@ -2,7 +2,7 @@ import logging
 import os
 from functools import wraps
 from flask import Flask, request, jsonify, Response, send_from_directory
-from dropbox_api import DropboxAPI, normalize_library_path
+from dropbox_api import DropboxAPI, DropboxAuthError, normalize_library_path
 
 # Configure logging
 logging.basicConfig(
@@ -171,6 +171,13 @@ def api_validate_path():
             'metadata_size': result.get('metadata_size'),
         })
 
+    except DropboxAuthError as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_code': 'DROPBOX_AUTH_FAILED'
+        }), 401
+
     except Exception as e:
         return jsonify({
             'success': False,
@@ -224,6 +231,13 @@ def download_db():
             }
         )
 
+    except DropboxAuthError as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_code': 'DROPBOX_AUTH_FAILED'
+        }), 401
+
     except Exception as e:
         return jsonify({
             'success': False,
@@ -273,6 +287,13 @@ def download_link():
             'success': True,
             'link': link
         })
+
+    except DropboxAuthError as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_code': 'DROPBOX_AUTH_FAILED'
+        }), 401
 
     except Exception as e:
         return jsonify({
@@ -345,6 +366,14 @@ def get_covers():
             logger.warning(f"Cover failures (sample): {sample_failures}")
 
         return jsonify({'success': True, 'covers': covers})
+
+    except DropboxAuthError as e:
+        logger.error(f"Covers request failed with auth error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_code': 'DROPBOX_AUTH_FAILED'
+        }), 401
 
     except Exception as e:
         logger.error(f"Covers request failed with exception: {e}", exc_info=True)

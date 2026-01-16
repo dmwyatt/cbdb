@@ -5,6 +5,11 @@ import requests
 logger = logging.getLogger('cbdb.dropbox')
 
 
+class DropboxAuthError(Exception):
+    """Raised when Dropbox authentication fails (e.g., expired or invalid token)."""
+    pass
+
+
 def normalize_library_path(path: str) -> str:
     """Ensure path starts with / and has no trailing slash."""
     if not path.startswith("/"):
@@ -97,11 +102,8 @@ class DropboxAPI:
             )
 
             if response.status_code == 401:
-                raise Exception(
-                    "Dropbox authentication failed. Please check:\n"
-                    "1. Token was copied correctly (no extra spaces or missing characters)\n"
-                    "2. App has 'files.metadata.read' and 'files.content.read' permissions\n"
-                    "3. App uses 'Full Dropbox' access (not 'App folder')\n"
+                raise DropboxAuthError(
+                    "Dropbox authentication failed. Your access token may have expired. "
                     "Generate a new token at https://www.dropbox.com/developers/apps"
                 )
 
@@ -137,11 +139,8 @@ class DropboxAPI:
             )
 
             if response.status_code == 401:
-                raise Exception(
-                    "Dropbox authentication failed. Please check:\n"
-                    "1. Token was copied correctly (no extra spaces or missing characters)\n"
-                    "2. App has 'files.metadata.read' and 'files.content.read' permissions\n"
-                    "3. App uses 'Full Dropbox' access (not 'App folder')\n"
+                raise DropboxAuthError(
+                    "Dropbox authentication failed. Your access token may have expired. "
                     "Generate a new token at https://www.dropbox.com/developers/apps"
                 )
 
@@ -179,11 +178,8 @@ class DropboxAPI:
             )
 
             if response.status_code == 401:
-                raise Exception(
-                    "Dropbox authentication failed. Please check:\n"
-                    "1. Token was copied correctly (no extra spaces or missing characters)\n"
-                    "2. App has 'files.metadata.read' and 'files.content.read' permissions\n"
-                    "3. App uses 'Full Dropbox' access (not 'App folder')\n"
+                raise DropboxAuthError(
+                    "Dropbox authentication failed. Your access token may have expired. "
                     "Generate a new token at https://www.dropbox.com/developers/apps"
                 )
 
@@ -294,11 +290,8 @@ class DropboxAPI:
 
             if response.status_code == 401:
                 logger.error("Dropbox authentication failed (401)")
-                raise Exception(
-                    "Dropbox authentication failed. Please check:\n"
-                    "1. Token was copied correctly (no extra spaces or missing characters)\n"
-                    "2. App has 'files.metadata.read' and 'files.content.read' permissions\n"
-                    "3. App uses 'Full Dropbox' access (not 'App folder')\n"
+                raise DropboxAuthError(
+                    "Dropbox authentication failed. Your access token may have expired. "
                     "Generate a new token at https://www.dropbox.com/developers/apps"
                 )
 
@@ -359,11 +352,8 @@ class DropboxAPI:
             )
 
             if response.status_code == 401:
-                raise Exception(
-                    "Dropbox authentication failed. Please check:\n"
-                    "1. Token was copied correctly (no extra spaces or missing characters)\n"
-                    "2. App has 'files.metadata.read' and 'files.content.read' permissions\n"
-                    "3. App uses 'Full Dropbox' access (not 'App folder')\n"
+                raise DropboxAuthError(
+                    "Dropbox authentication failed. Your access token may have expired. "
                     "Generate a new token at https://www.dropbox.com/developers/apps"
                 )
 

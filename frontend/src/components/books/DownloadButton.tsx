@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { getDownloadLink } from '@/lib/api';
+import { getDownloadLink, isDropboxAuthError } from '@/lib/api';
 import { formatBytes } from '@/lib/utils';
 import { useLibraryStore } from '@/store/libraryStore';
 import { showGlobalError } from '@/lib/errorService';
@@ -13,7 +13,7 @@ interface DownloadButtonProps {
 
 export function DownloadButton({ format, bookPath }: DownloadButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const { libraryPath } = useLibraryStore();
+  const { libraryPath, setDropboxError } = useLibraryStore();
 
   const handleDownload = async () => {
     if (!libraryPath) {
@@ -27,7 +27,11 @@ export function DownloadButton({ format, bookPath }: DownloadButtonProps) {
       const link = await getDownloadLink(libraryPath, filePath);
       window.open(link, '_blank');
     } catch (error) {
-      showGlobalError(error);
+      if (isDropboxAuthError(error)) {
+        setDropboxError(error.message);
+      } else {
+        showGlobalError(error);
+      }
     } finally {
       setIsLoading(false);
     }

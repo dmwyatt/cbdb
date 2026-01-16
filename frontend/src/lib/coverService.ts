@@ -1,7 +1,18 @@
-import { fetchCovers } from '@/lib/api';
+import { fetchCovers, isDropboxAuthError } from '@/lib/api';
 import { getCachedCovers, saveCachedCovers } from '@/lib/indexeddb';
 import { log, LogCategory } from '@/lib/logger';
 import type { LibraryPath } from '@/types/libraryPath';
+
+// Callback for Dropbox auth errors - set by the store
+let onDropboxAuthError: ((message: string) => void) | null = null;
+
+/**
+ * Set the callback for Dropbox auth errors.
+ * This should be called once by the store to wire up error handling.
+ */
+export function setDropboxAuthErrorHandler(handler: (message: string) => void): void {
+  onDropboxAuthError = handler;
+}
 
 const BATCH_SIZE = 25;
 
@@ -117,6 +128,12 @@ class CoverService {
         }
       } catch (e) {
         log.warn(LogCategory.COVER, 'Failed to fetch cover batch', e);
+
+        // Handle Dropbox auth errors specially
+        if (isDropboxAuthError(e) && onDropboxAuthError) {
+          onDropboxAuthError(e.message);
+        }
+
         // Resolve with null on error
         for (const path of batch) {
           resolvers.get(path)?.(null);
