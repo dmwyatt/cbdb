@@ -1,14 +1,24 @@
 # Calibre Library Web App
 
-A simple web app for browsing your Calibre book library from Dropbox using the Dropbox API.
+A browser-based Calibre e-book library viewer that runs SQLite queries directly in your browser using WebAssembly. Your library metadata is downloaded once from Dropbox and cached locally for instant, offline-capable browsing.
 
 ## Features
 
-- Browse your entire Calibre library
+- Browse your entire Calibre library with grid or table view
 - Search books by title or author
 - View detailed book information (authors, series, ratings, tags, formats, descriptions)
-- Automatic sync with Dropbox using API access token
+- Book cover thumbnails via Dropbox batch API
+- Download books directly from Dropbox
+- Offline-capable after initial sync (database cached in browser)
 - Clean, responsive design that works on mobile
+
+## Tech Stack
+
+- **Backend**: Flask 3.0, Python 3.11
+- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui
+- **State Management**: Zustand with persistence
+- **Database**: sql.js (WASM SQLite) running in browser, IndexedDB caching
+- **Deployment**: Railway with nixpacks (Node.js + Python)
 
 ## Setup
 
@@ -46,17 +56,16 @@ A simple web app for browsing your Calibre book library from Dropbox using the D
 5. Click "Save and Continue"
 6. Done! Your library is now accessible.
 
-### That's It!
-
 The app saves your library path in your browser's localStorage. You only need to set it up once per browser/device.
 
 ## How It Works
 
-- **Environment Variable**: Your Dropbox access token is configured as an environment variable on the server
-- **Frontend Storage**: Your Dropbox library path is stored in your browser's localStorage
-- **On-Demand Sync**: When you visit the app, it downloads `metadata.db` from Dropbox via the API
-- **Server-Side Caching**: The database is cached on the server (Railway's ephemeral storage)
-- **Stateless**: Perfect for serverless/container deployments
+1. **Server Proxy**: Flask backend proxies Dropbox API calls (keeps token secure)
+2. **Database Download**: On first load, `metadata.db` is downloaded from Dropbox
+3. **Browser Caching**: Database is cached in IndexedDB for offline access
+4. **WASM SQLite**: All queries run in-browser via sql.js (instant, no server round-trips)
+5. **Cover Thumbnails**: Book covers fetched via Dropbox batch thumbnail API
+6. **Direct Downloads**: Book files downloaded via temporary Dropbox links
 
 ## Environment Variables
 
@@ -69,7 +78,7 @@ The app saves your library path in your browser's localStorage. You only need to
 ## Local Development
 
 ```bash
-# Clone and setup
+# Clone and setup backend
 git clone <your-repo>
 cd cbdb
 python -m venv venv
@@ -80,53 +89,60 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env and add your DROPBOX_ACCESS_TOKEN
 
-# Run
-python app.py
+# Setup frontend
+cd frontend
+npm install
+cd ..
 
-# Visit http://localhost:5000
-# You'll see the setup page - enter your Dropbox library path
+# Run development servers (in separate terminals)
+python app.py              # Backend on http://localhost:5000
+cd frontend && npm run dev # Frontend on http://localhost:5173
+
+# Or build for production
+cd frontend && npm run build
+python app.py  # Serves React build from frontend/dist at http://localhost:5000
 ```
 
 ## Project Structure
 
 ```
 cbdb/
-├── app.py                 # Main Flask application
-├── db.py                  # Database query interface
-├── dropbox_api.py         # Dropbox API integration
+├── app.py                 # Flask server - API endpoints, serves React build
+├── dropbox_api.py         # Dropbox API client class
 ├── requirements.txt       # Python dependencies
-├── Procfile              # Railway/Heroku process file
-├── railway.json          # Railway configuration
-├── runtime.txt           # Python version specification
-├── .env.example          # Environment variable template
-├── templates/            # HTML templates
-│   ├── base.html
-│   ├── index.html
-│   └── book_detail.html
-└── static/
-    └── css/
-        └── style.css     # Stylesheet
+├── Dockerfile             # Multi-stage build (Node.js + Python)
+├── Procfile               # Railway/Heroku process file
+├── railway.json           # Railway configuration
+├── runtime.txt            # Python version specification
+├── .env.example           # Environment variable template
+└── frontend/              # React + TypeScript + Vite app
+    ├── src/
+    │   ├── App.tsx        # Main React component
+    │   ├── components/    # React components
+    │   │   ├── ui/        # shadcn/ui primitives
+    │   │   ├── layout/    # Header, Footer, StatusBar
+    │   │   ├── setup/     # SetupForm
+    │   │   ├── books/     # BookGrid, BookTable, BookModal, etc.
+    │   │   └── common/    # LoadingOverlay, StarRating
+    │   ├── hooks/         # Custom React hooks
+    │   ├── lib/           # Utilities, API client, sql.js wrapper
+    │   ├── store/         # Zustand state management
+    │   └── types/         # TypeScript interfaces
+    ├── package.json
+    └── vite.config.ts
 ```
-
-## How It Works
-
-1. **Configure**: Set your Dropbox access token as an environment variable
-2. **Setup**: Enter your Calibre library path in the browser on first visit
-3. **Sync**: The app downloads `metadata.db` from your Dropbox via the API
-4. **Query**: The app reads the SQLite database to fetch book information
-5. **Display**: Books are displayed in a clean, paginated interface
-6. **Search**: Full-text search across book titles and authors
 
 ## API Endpoints
 
-- `GET /` - Main library view
-- `GET /book/<id>` - Book detail page
-- `GET /api/config` - Return token configuration status
-- `POST /api/validate-path` - Validate library path and trigger sync
-- `POST /api/sync` - Trigger database sync with Dropbox
-- `GET /api/authors` - Get list of all authors (JSON)
-- `GET /api/tags` - Get list of all tags (JSON)
-- `GET /api/series` - Get list of all series (JSON)
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/health` | GET | Health check |
+| `/` | GET | Serve React app |
+| `/api/config` | GET | Check if Dropbox token is configured |
+| `/api/validate-path` | POST | Verify library path exists in Dropbox |
+| `/api/download-db` | GET | Download metadata.db (uses `X-Library-Path` header) |
+| `/api/download-link` | GET | Get temporary download link for book file |
+| `/api/covers` | POST | Get batch thumbnails for book covers |
 
 ## Troubleshooting
 
@@ -145,9 +161,8 @@ cbdb/
 
 ### Database not updating with new books
 
-- Click the "Change Library" button in the header
-- Re-enter your library path to trigger a fresh download
-- Or use the API: `POST /api/sync` with your library path in the request body
+- Click the "Refresh" button in the header to re-download from Dropbox
+- This clears the IndexedDB cache and fetches fresh data
 
 ### "Dropbox access token not configured"
 
@@ -157,10 +172,11 @@ cbdb/
 
 ## Security Notes
 
-- Your Dropbox access token is stored securely on the server (not in the browser)
+- Your Dropbox access token is stored securely on the server (never sent to browser)
 - Only the account owner with the access token can access the library
-- Actual book files are NOT exposed (only metadata.db)
-- The library path is stored in browser localStorage
+- All SQL queries use parameterized statements (prevents injection)
+- React handles HTML escaping (prevents XSS)
+- SQLite header bytes are validated on download (prevents corruption)
 
 ## Contributing
 
@@ -175,6 +191,7 @@ See LICENSE file for details.
 - Built for [Calibre](https://calibre-ebook.com/) e-book management
 - Uses the [Dropbox API](https://www.dropbox.com/developers)
 - Designed for deployment on [Railway](https://railway.app)
+- Browser SQLite powered by [sql.js](https://sql.js.org/)
 
 ## Sources
 
