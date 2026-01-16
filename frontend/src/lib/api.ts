@@ -1,4 +1,5 @@
 import type { DownloadLinkResponse, CoversResponse } from '@/types/api';
+import type { LibraryPath } from '@/types/libraryPath';
 
 const AUTH_STORAGE_KEY = 'calibre-app-password';
 
@@ -10,7 +11,7 @@ function getAuthHeaders(): HeadersInit {
   return {};
 }
 
-export async function downloadDatabase(libraryPath: string): Promise<Uint8Array> {
+export async function downloadDatabase(libraryPath: LibraryPath): Promise<Uint8Array> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
@@ -48,7 +49,7 @@ export async function downloadDatabase(libraryPath: string): Promise<Uint8Array>
 }
 
 export async function getDownloadLink(
-  libraryPath: string,
+  libraryPath: LibraryPath,
   filePath: string
 ): Promise<string> {
   const controller = new AbortController();
@@ -85,7 +86,7 @@ export async function getDownloadLink(
 }
 
 export async function fetchCovers(
-  libraryPath: string,
+  libraryPath: LibraryPath,
   bookPaths: string[]
 ): Promise<Record<string, string>> {
   const controller = new AbortController();
