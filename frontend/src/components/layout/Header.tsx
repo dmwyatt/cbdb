@@ -1,9 +1,11 @@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useLibraryStore } from '@/store/libraryStore';
+import { useAuthStore } from '@/store/authStore';
 
 export function Header() {
   const { db, searchTerm, setSearchTerm, resetLibrary } = useLibraryStore();
+  const { authRequired, logout } = useAuthStore();
   const showSearch = db !== null;
 
   return (
@@ -15,15 +17,26 @@ export function Header() {
               Calibre Library
             </a>
           </h1>
-          {showSearch && (
-            <Button
-              variant="ghost"
-              className="text-white hover:text-white hover:bg-white/10"
-              onClick={() => resetLibrary()}
-            >
-              Change Library
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {showSearch && (
+              <Button
+                variant="ghost"
+                className="text-white hover:text-white hover:bg-white/10"
+                onClick={() => resetLibrary()}
+              >
+                Change Library
+              </Button>
+            )}
+            {authRequired && (
+              <Button
+                variant="ghost"
+                className="text-white hover:text-white hover:bg-white/10"
+                onClick={logout}
+              >
+                Log Out
+              </Button>
+            )}
+          </div>
         </div>
 
         {showSearch && (
