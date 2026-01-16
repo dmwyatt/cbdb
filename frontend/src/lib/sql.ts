@@ -1,5 +1,11 @@
-import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js';
+import type { Database, SqlJsStatic } from 'sql.js';
 import type { Book, BookDetail, BooksResult, BookFormat } from '@/types/book';
+
+// sql.js is loaded via CDN script tag in index.html
+// This declares the global function it provides
+declare global {
+  function initSqlJs(config?: { locateFile?: (file: string) => string }): Promise<SqlJsStatic>;
+}
 
 let SQL: SqlJsStatic | null = null;
 
@@ -7,7 +13,7 @@ export async function initializeSqlJs(): Promise<SqlJsStatic> {
   if (SQL) return SQL;
 
   SQL = await initSqlJs({
-    locateFile: (file) =>
+    locateFile: (file: string) =>
       `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${file}`,
   });
 
