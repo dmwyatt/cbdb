@@ -25,33 +25,6 @@ Keep `loadDatabase()` as a thin orchestrator that delegates to these services.
 
 ---
 
-## Priority 2: Design Issues
-
-### Hide store internals behind action methods
-
-**Files**: Multiple components directly access store fields
-
-Current pattern (tight coupling):
-```typescript
-const { db, searchTerm, setSearchTerm, resetLibrary } = useLibraryStore();
-```
-
-Components depend on store shape. If store structure changes, all components break.
-
-**Solution**: Expose query methods instead of fields:
-```typescript
-// Instead of exposing `db` field
-useLibraryStore.getState().executeQuery(...)
-
-// Instead of exposing `searchTerm` + `setSearchTerm`
-const searchTerm = useLibraryStore(state => state.searchTerm);
-const updateSearch = useLibraryStore(state => state.actions.updateSearch);
-```
-
-Consider splitting into multiple stores or using selectors.
-
----
-
 ## Completed
 
 ### Unify error handling patterns
