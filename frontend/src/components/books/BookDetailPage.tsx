@@ -113,11 +113,11 @@ export function BookDetailPage() {
 
   return (
     <>
-      {/* Morphing header - becomes sticky when collapsed */}
+      {/* Morphing header - always sticky, elements animate inside */}
       <div
         ref={headerRef}
-        className={`bg-white/95 backdrop-blur-sm z-50 transition-shadow duration-200 ${
-          isCollapsed ? 'sticky top-0 shadow-sm border-b border-slate-200' : ''
+        className={`sticky top-0 bg-white/95 backdrop-blur-sm z-50 transition-shadow duration-200 ${
+          isCollapsed ? 'shadow-sm border-b border-slate-200' : ''
         }`}
         style={{ height: headerHeight }}
       >
@@ -195,9 +195,6 @@ export function BookDetailPage() {
           </div>
         </div>
       </div>
-
-      {/* Spacer to prevent content jump when header becomes sticky */}
-      {isCollapsed && <div style={{ height: SCROLL_DISTANCE }} />}
 
       <main className="container mx-auto px-4 py-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
       <div className="space-y-6">
