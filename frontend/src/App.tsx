@@ -12,11 +12,12 @@ function App() {
     useLibraryStore();
 
   // Auto-load database if we have a saved library path
+  // Don't auto-load if there's an error (user should see error first)
   useEffect(() => {
-    if (libraryPath && !db && !isLoading) {
+    if (libraryPath && !db && !isLoading && !error) {
       loadDatabase();
     }
-  }, [libraryPath, db, isLoading, loadDatabase]);
+  }, [libraryPath, db, isLoading, error, loadDatabase]);
 
   const showSetup = !db && !isLoading;
   const showLibrary = db !== null;
