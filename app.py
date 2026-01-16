@@ -71,6 +71,27 @@ def index():
     return send_from_directory(app.static_folder, 'index.html')
 
 
+@app.route('/<path:path>')
+def catch_all(path):
+    """
+    Catch-all route to support client-side routing.
+    Serves index.html for any non-API routes, allowing React Router to handle them.
+    """
+    # If it's an API route, return 404 (shouldn't reach here, but safety check)
+    if path.startswith('api/'):
+        return jsonify({'error': 'Not found'}), 404
+
+    # Try to serve static file first (JS, CSS, images, etc.)
+    static_file_path = os.path.join(app.static_folder, path)
+    if os.path.isfile(static_file_path):
+        return send_from_directory(app.static_folder, path)
+
+    # For all other routes, serve index.html and let React Router handle it
+    if not os.path.exists(app.static_folder):
+        return jsonify({'error': 'Frontend not built', 'static_folder': app.static_folder}), 500
+    return send_from_directory(app.static_folder, 'index.html')
+
+
 @app.route('/api/auth-check')
 def auth_check():
     """Check if authentication is required and validate provided password."""
