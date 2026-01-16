@@ -1,6 +1,7 @@
 const DB_NAME = 'CalibreWASM';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'cache';
+const COVERS_STORE = 'covers';
 const DB_CACHE_KEY = 'calibreMetadataDB';
 
 function openCacheDB(): Promise<IDBDatabase> {
@@ -12,6 +13,9 @@ function openCacheDB(): Promise<IDBDatabase> {
       const db = (e.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME);
+      }
+      if (!db.objectStoreNames.contains(COVERS_STORE)) {
+        db.createObjectStore(COVERS_STORE);
       }
     };
   });
@@ -79,5 +83,68 @@ export async function clearCache(): Promise<void> {
     store.delete(DB_CACHE_KEY + '_path');
   } catch (e) {
     console.warn('Failed to clear cache:', e);
+  }
+}
+
+export async function getCachedCovers(
+  paths: string[]
+): Promise<Record<string, string>> {
+  try {
+    const cacheDB = await openCacheDB();
+    const tx = cacheDB.transaction(COVERS_STORE, 'readonly');
+    const store = tx.objectStore(COVERS_STORE);
+
+    const results: Record<string, string> = {};
+
+    await Promise.all(
+      paths.map(
+        (path) =>
+          new Promise<void>((resolve) => {
+            const req = store.get(path);
+            req.onsuccess = () => {
+              if (req.result) results[path] = req.result;
+              resolve();
+            };
+            req.onerror = () => resolve();
+          })
+      )
+    );
+
+    return results;
+  } catch (e) {
+    console.warn('Failed to get cached covers:', e);
+    return {};
+  }
+}
+
+export async function saveCachedCovers(
+  covers: Record<string, string>
+): Promise<void> {
+  try {
+    const cacheDB = await openCacheDB();
+    const tx = cacheDB.transaction(COVERS_STORE, 'readwrite');
+    const store = tx.objectStore(COVERS_STORE);
+
+    for (const [path, data] of Object.entries(covers)) {
+      store.put(data, path);
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) {
+    console.warn('Failed to save covers to cache:', e);
+  }
+}
+
+export async function clearCoversCache(): Promise<void> {
+  try {
+    const cacheDB = await openCacheDB();
+    const tx = cacheDB.transaction(COVERS_STORE, 'readwrite');
+    const store = tx.objectStore(COVERS_STORE);
+    store.clear();
+  } catch (e) {
+    console.warn('Failed to clear covers cache:', e);
   }
 }

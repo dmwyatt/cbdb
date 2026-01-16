@@ -248,6 +248,66 @@ class DropboxAPI:
             "metadata_modified": metadata.get("server_modified"),
         }
 
+    def get_thumbnails_batch(self, paths, size="w128h128", format="jpeg"):
+        """
+        Get thumbnails for multiple files in one request.
+
+        Args:
+            paths: List of file paths (max 25)
+            size: Thumbnail size (w32h32, w64h64, w128h128, w256h256, etc.)
+            format: Output format (jpeg or png)
+
+        Returns:
+            List of {path, thumbnail (base64), error} dicts
+        """
+        if len(paths) > 25:
+            raise ValueError("Maximum 25 thumbnails per batch")
+
+        entries = [
+            {
+                "path": path,
+                "format": format,
+                "size": size,
+                "mode": "strict"
+            }
+            for path in paths
+        ]
+
+        try:
+            response = requests.post(
+                f"{self.CONTENT_URL}/files/get_thumbnail_batch",
+                headers=self._headers(),
+                json={"entries": entries},
+                timeout=30,
+            )
+
+            if response.status_code == 401:
+                raise Exception(
+                    "Dropbox authentication failed. Please check:\n"
+                    "1. Token was copied correctly (no extra spaces or missing characters)\n"
+                    "2. App has 'files.metadata.read' and 'files.content.read' permissions\n"
+                    "3. App uses 'Full Dropbox' access (not 'App folder')\n"
+                    "Generate a new token at https://www.dropbox.com/developers/apps"
+                )
+
+            response.raise_for_status()
+            results = response.json().get("entries", [])
+
+            # Each result has either:
+            # - {".tag": "success", "metadata": {...}, "thumbnail": "base64data"}
+            # - {".tag": "failure", "failure": {".tag": "path", "path": ...}}
+            return [
+                {
+                    "path": paths[i],
+                    "thumbnail": r.get("thumbnail") if r.get(".tag") == "success" else None,
+                    "error": r.get("failure", {}).get(".tag") if r.get(".tag") == "failure" else None
+                }
+                for i, r in enumerate(results)
+            ]
+
+        except requests.exceptions.RequestException as e:
+            raise Exception(f"Failed to get thumbnails: {str(e)}")
+
     def get_temporary_link(self, path):
         """
         Get a temporary direct download link for a file.
