@@ -42,6 +42,7 @@ interface LibraryState {
   setPage: (page: number) => void;
   setSelectedBookId: (id: number | null) => void;
   resetLibrary: () => Promise<void>;
+  setError: (error: string) => void;
   clearError: () => void;
 }
 
@@ -241,6 +242,10 @@ export const useLibraryStore = create<LibraryState>()(
           searchTerm: '',
           selectedBookId: null,
         });
+      },
+
+      setError: (error) => {
+        set({ error });
       },
 
       clearError: () => {
