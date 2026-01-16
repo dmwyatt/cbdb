@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { BookGrid } from './BookGrid';
 import { BookTable } from './BookTable';
 import { ViewToggle } from './ViewToggle';
+import { FilterPanel } from './FilterPanel';
 import { Pagination } from './Pagination';
 import { StatusBar } from '@/components/layout/StatusBar';
 import { useLibraryStore } from '@/store/libraryStore';
@@ -18,6 +19,8 @@ export function Library() {
     currentPage,
     perPage,
     searchTerm,
+    filters,
+    sort,
     setPage,
   } = useLibraryStore();
 
@@ -25,13 +28,19 @@ export function Library() {
 
   // Use queryService for all database queries - it handles timing and error handling
   const { books, total, queryTime } = useMemo(() => {
-    const result = queryService.queryBooks(debouncedSearchTerm, currentPage, perPage);
+    const result = queryService.queryBooksWithFilters(
+      debouncedSearchTerm,
+      filters,
+      sort,
+      currentPage,
+      perPage
+    );
     return {
       books: result.data.books,
       total: result.data.total,
       queryTime: result.queryTime,
     };
-  }, [db, debouncedSearchTerm, currentPage, perPage]);
+  }, [db, debouncedSearchTerm, filters, sort, currentPage, perPage]);
 
   const totalPages = calculateTotalPages(total, perPage);
 
@@ -44,7 +53,7 @@ export function Library() {
       <StatusBar queryTime={queryTime} />
 
       <main className="container mx-auto px-4 py-6">
-        <div className="flex justify-between items-start flex-wrap gap-4 mb-6">
+        <div className="flex justify-between items-start flex-wrap gap-4 mb-4">
           <div>
             <h2 className="text-2xl font-bold text-slate-800">
               {debouncedSearchTerm ? `Search: "${debouncedSearchTerm}"` : 'All Books'}
@@ -56,6 +65,8 @@ export function Library() {
           </div>
           <ViewToggle />
         </div>
+
+        <FilterPanel />
 
         {currentView === 'grid' ? (
           <BookGrid books={books} onBookClick={handleBookClick} />
