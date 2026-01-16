@@ -76,14 +76,11 @@ export const useLibraryStore = create<LibraryState>()(
       },
 
       loadDatabase: async (forceRefresh = false) => {
-        const { libraryPath, db: existingDb } = get();
+        const { libraryPath } = get();
         if (!libraryPath) {
           set({ error: 'Library path not configured' });
           return;
         }
-
-        // Track if this is a refresh of an existing database
-        const isRefresh = forceRefresh && existingDb !== null;
 
         set({
           isLoading: true,
@@ -183,14 +180,15 @@ export const useLibraryStore = create<LibraryState>()(
           const errorMessage =
             error instanceof Error ? error.message : 'Failed to load database';
 
-          // Always clear loading state, preserve db if this was a refresh
+          // Always clear loading state
+          // IMPORTANT: Never reset db during refresh (forceRefresh=true) to prevent
+          // the useEffect in App.tsx from re-triggering loadDatabase in a loop
           set({
             isLoading: false,
             loadingProgress: 0,
             loadingMessage: '',
             error: errorMessage,
-            // Only set db to null if this wasn't a refresh with existing data
-            ...(isRefresh && existingDb ? {} : { db: null }),
+            ...(forceRefresh ? {} : { db: null }),
           });
         }
       },
