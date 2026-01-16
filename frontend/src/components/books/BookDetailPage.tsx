@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { StarRating } from '@/components/common/StarRating';
 import { DownloadButton } from './DownloadButton';
 import { useLibraryStore } from '@/store/libraryStore';
-import { getBookDetail } from '@/lib/sql';
+import { queryService } from '@/lib/queryService';
 import { coverService } from '@/lib/coverService';
 import type { BookDetail } from '@/types/book';
 
@@ -29,9 +29,9 @@ export function BookDetailPage() {
       return;
     }
 
-    const startTime = performance.now();
-    const detail = getBookDetail(db, bookId);
-    setQueryTime(performance.now() - startTime);
+    const result = queryService.getBookDetail(bookId);
+    setQueryTime(result.queryTime);
+    const detail = result.data;
 
     if (!detail) {
       navigate('/', { replace: true });
