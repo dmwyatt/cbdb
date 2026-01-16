@@ -9,6 +9,7 @@ import {
 import { downloadDatabase } from '@/lib/api';
 import { saveToCache, loadFromCache, clearCache, getCacheTimestamp } from '@/lib/indexeddb';
 import { queryService } from '@/lib/queryService';
+import { offlineService } from '@/lib/offlineService';
 
 export type ViewMode = 'grid' | 'table';
 
@@ -119,11 +120,9 @@ export const useLibraryStore = create<LibraryState>()(
 
           if (!dbData) {
             // Download from server
-            if (!navigator.onLine) {
-              throw new Error(
-                'You are offline and no cached database is available. Please connect to the internet and try again.'
-              );
-            }
+            offlineService.requireOnline(
+              'You are offline and no cached database is available. Please connect to the internet and try again.'
+            );
 
             set({
               loadingMessage: 'Downloading database from Dropbox...',
@@ -202,7 +201,7 @@ export const useLibraryStore = create<LibraryState>()(
       },
 
       refreshDatabase: async () => {
-        if (!navigator.onLine) {
+        if (!offlineService.isOnline) {
           set({
             error:
               'Cannot refresh while offline. Please connect to the internet and try again.',
