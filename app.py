@@ -1,10 +1,47 @@
 import os
+from functools import wraps
 from flask import Flask, request, jsonify, Response, send_from_directory
 from dropbox_api import DropboxAPI
 
 # Serve React build from frontend/dist
 STATIC_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'frontend', 'dist')
 app = Flask(__name__, static_folder=STATIC_FOLDER, static_url_path='')
+
+# App password for authentication (REQUIRED for security)
+APP_PASSWORD = os.getenv('APP_PASSWORD', '').strip()
+
+
+def require_auth(f):
+    """Decorator to require authentication for API endpoints."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not APP_PASSWORD:
+            # No password configured - this is a server misconfiguration
+            return jsonify({
+                'success': False,
+                'error': 'Server misconfigured: APP_PASSWORD environment variable is not set',
+                'misconfigured': True
+            }), 503
+
+        # Check for password in header
+        provided_password = request.headers.get('X-App-Password', '').strip()
+
+        if not provided_password:
+            return jsonify({
+                'success': False,
+                'error': 'Authentication required',
+                'auth_required': True
+            }), 401
+
+        if provided_password != APP_PASSWORD:
+            return jsonify({
+                'success': False,
+                'error': 'Invalid password',
+                'auth_required': True
+            }), 401
+
+        return f(*args, **kwargs)
+    return decorated
 
 
 def get_library_path():
@@ -34,7 +71,31 @@ def index():
     return send_from_directory(app.static_folder, 'index.html')
 
 
+@app.route('/api/auth-check')
+def auth_check():
+    """Check if authentication is required and validate provided password."""
+    if not APP_PASSWORD:
+        # Server is misconfigured - APP_PASSWORD must be set
+        return jsonify({
+            'misconfigured': True,
+            'error': 'APP_PASSWORD environment variable is not set. The server administrator must configure a password.'
+        }), 503
+
+    provided_password = request.headers.get('X-App-Password', '').strip()
+    if provided_password and provided_password == APP_PASSWORD:
+        return jsonify({
+            'auth_required': True,
+            'authenticated': True
+        })
+
+    return jsonify({
+        'auth_required': True,
+        'authenticated': False
+    })
+
+
 @app.route('/api/config')
+@require_auth
 def api_config():
     """Return configuration status for the frontend."""
     api = get_dropbox_api()
@@ -44,6 +105,7 @@ def api_config():
 
 
 @app.route('/api/validate-path', methods=['POST'])
+@require_auth
 def api_validate_path():
     """Validate a library path exists in Dropbox."""
     api = get_dropbox_api()
@@ -84,6 +146,7 @@ def api_validate_path():
 
 
 @app.route('/api/download-db')
+@require_auth
 def download_db():
     """
     Download metadata.db from Dropbox for browser-side SQLite.
@@ -139,6 +202,7 @@ def download_db():
 
 
 @app.route('/api/download-link')
+@require_auth
 def download_link():
     """
     Get a temporary download link for a book file.
@@ -191,6 +255,7 @@ def download_link():
 
 
 @app.route('/api/covers', methods=['POST'])
+@require_auth
 def get_covers():
     """
     Get thumbnails for multiple book covers in one request.

@@ -1,5 +1,15 @@
 import type { DownloadLinkResponse, CoversResponse } from '@/types/api';
 
+const AUTH_STORAGE_KEY = 'calibre-app-password';
+
+function getAuthHeaders(): HeadersInit {
+  const password = localStorage.getItem(AUTH_STORAGE_KEY);
+  if (password) {
+    return { 'X-App-Password': password };
+  }
+  return {};
+}
+
 export async function downloadDatabase(libraryPath: string): Promise<Uint8Array> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
@@ -7,6 +17,7 @@ export async function downloadDatabase(libraryPath: string): Promise<Uint8Array>
   try {
     const response = await fetch('/api/download-db', {
       headers: {
+        ...getAuthHeaders(),
         'X-Library-Path': libraryPath,
       },
       signal: controller.signal,
@@ -48,6 +59,7 @@ export async function getDownloadLink(
       `/api/download-link?path=${encodeURIComponent(filePath)}`,
       {
         headers: {
+          ...getAuthHeaders(),
           'X-Library-Path': libraryPath,
         },
         signal: controller.signal,
@@ -83,6 +95,7 @@ export async function fetchCovers(
     const response = await fetch('/api/covers', {
       method: 'POST',
       headers: {
+        ...getAuthHeaders(),
         'Content-Type': 'application/json',
         'X-Library-Path': libraryPath,
       },
