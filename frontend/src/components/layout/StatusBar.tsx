@@ -47,7 +47,7 @@ export function StatusBar({ queryTime }: StatusBarProps) {
         <Button
           variant="outline"
           size="sm"
-          className="text-white border-white/30 hover:bg-white/10 hover:text-white"
+          className="appearance-none bg-white/15 text-white border-white/30 hover:bg-white/10 hover:text-white"
           onClick={handleRefresh}
           disabled={isRefreshing || !isOnline}
         >
