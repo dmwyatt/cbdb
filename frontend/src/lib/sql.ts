@@ -375,7 +375,7 @@ export function getBooksByFilters(
       b.path,
       b.has_cover,
       b.series_index,
-      GROUP_CONCAT(DISTINCT a.name, ' & ') as authors,
+      GROUP_CONCAT(a.name, ' & ') as authors,
       s.name as series,
       r.rating
     FROM books b
