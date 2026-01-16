@@ -31,9 +31,6 @@ interface LibraryState {
   perPage: number;
   searchTerm: string;
 
-  // Modal state
-  selectedBookId: number | null;
-
   // Actions
   setLibraryPath: (path: string) => void;
   loadDatabase: (forceRefresh?: boolean) => Promise<void>;
@@ -41,7 +38,6 @@ interface LibraryState {
   setView: (view: ViewMode) => void;
   setSearchTerm: (term: string) => void;
   setPage: (page: number) => void;
-  setSelectedBookId: (id: number | null) => void;
   resetLibrary: () => Promise<void>;
   setError: (error: string) => void;
   clearError: () => void;
@@ -71,7 +67,6 @@ export const useLibraryStore = create<LibraryState>()(
       currentPage: 1,
       perPage: 20,
       searchTerm: '',
-      selectedBookId: null,
 
       setLibraryPath: (path) => {
         set({ libraryPath: path });
@@ -226,10 +221,6 @@ export const useLibraryStore = create<LibraryState>()(
         set({ currentPage: page });
       },
 
-      setSelectedBookId: (id) => {
-        set({ selectedBookId: id });
-      },
-
       resetLibrary: async () => {
         await clearCache();
         set({
@@ -238,7 +229,6 @@ export const useLibraryStore = create<LibraryState>()(
           error: null,
           currentPage: 1,
           searchTerm: '',
-          selectedBookId: null,
         });
       },
 

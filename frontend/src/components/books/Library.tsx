@@ -1,15 +1,16 @@
 import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { BookGrid } from './BookGrid';
 import { BookTable } from './BookTable';
 import { ViewToggle } from './ViewToggle';
 import { Pagination } from './Pagination';
-import { BookModal } from './BookModal';
 import { StatusBar } from '@/components/layout/StatusBar';
 import { useLibraryStore } from '@/store/libraryStore';
 import { useDebounce } from '@/hooks/useDebounce';
 import { getBooks, searchBooks } from '@/lib/sql';
 
 export function Library() {
+  const navigate = useNavigate();
   const {
     db,
     currentView,
@@ -17,7 +18,6 @@ export function Library() {
     perPage,
     searchTerm,
     setPage,
-    setSelectedBookId,
   } = useLibraryStore();
 
   const debouncedSearchTerm = useDebounce(searchTerm, 150);
@@ -37,7 +37,7 @@ export function Library() {
   const totalPages = Math.ceil(total / perPage);
 
   const handleBookClick = (bookId: number) => {
-    setSelectedBookId(bookId);
+    navigate(`/book/${bookId}`);
   };
 
   return (
@@ -70,8 +70,6 @@ export function Library() {
           onPageChange={setPage}
         />
       </main>
-
-      <BookModal />
     </>
   );
 }

@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { SetupForm } from '@/components/setup/SetupForm';
 import { Library } from '@/components/books/Library';
+import { BookDetailPage } from '@/components/books/BookDetailPage';
 import { LoadingOverlay } from '@/components/common/LoadingOverlay';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { LoginForm } from '@/components/auth/LoginForm';
@@ -87,23 +89,32 @@ function App() {
   const showLibrary = db !== null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
-      <Header />
+    <BrowserRouter>
+      <div className="min-h-screen flex flex-col bg-slate-50">
+        <Header />
 
-      {isLoading && !error && (
-        <LoadingOverlay message={loadingMessage} progress={loadingProgress} onCancel={cancelLoading} />
-      )}
+        {isLoading && !error && (
+          <LoadingOverlay message={loadingMessage} progress={loadingProgress} onCancel={cancelLoading} />
+        )}
 
-      {showSetup && <SetupForm />}
-      {showLibrary && <Library />}
+        {showSetup && <SetupForm />}
 
-      {/* Show error dialog - works for both refresh failures and initial load errors */}
-      {error && (
-        <ErrorAlert error={error} onDismiss={clearError} />
-      )}
+        {showLibrary && (
+          <Routes>
+            <Route path="/" element={<Library />} />
+            <Route path="/book/:id" element={<BookDetailPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        )}
 
-      <Footer />
-    </div>
+        {/* Show error dialog - works for both refresh failures and initial load errors */}
+        {error && (
+          <ErrorAlert error={error} onDismiss={clearError} />
+        )}
+
+        <Footer />
+      </div>
+    </BrowserRouter>
   );
 }
 
