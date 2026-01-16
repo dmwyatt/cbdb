@@ -54,20 +54,26 @@ export function BookModal() {
 
   return (
     <Dialog open={selectedBookId !== null} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0" showCloseButton={false}>
+      <DialogContent
+        className="
+          inset-0 translate-x-0 translate-y-0 max-w-none max-h-none h-full rounded-none
+          sm:inset-auto sm:top-[50%] sm:left-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:max-w-2xl sm:max-h-[90vh] sm:h-auto sm:rounded-lg
+          overflow-y-auto p-0
+        "
+        showCloseButton={false}
+      >
         {book && (
           <>
             {/* Sticky header with title and close button */}
-            <div className="sticky top-0 z-10 bg-background border-b px-6 py-4 flex items-center justify-between gap-4"
-                 style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top, 0px))' }}>
-              <DialogTitle className="text-2xl">{book.title}</DialogTitle>
+            <div className="sticky top-0 z-10 bg-background border-b px-6 py-4 flex items-center justify-between gap-4">
+              <DialogTitle className="text-2xl line-clamp-2">{book.title}</DialogTitle>
               <DialogClose className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none flex-shrink-0">
                 <XIcon className="h-5 w-5" />
                 <span className="sr-only">Close</span>
               </DialogClose>
             </div>
 
-            <div className="space-y-4 p-6">
+            <div className="space-y-4 p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
               <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                 {/* Cover image */}
                 <div className="w-32 h-44 bg-slate-100 rounded flex-shrink-0 flex items-center justify-center overflow-hidden mx-auto sm:mx-0">
