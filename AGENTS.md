@@ -96,11 +96,13 @@ showGlobalError('Something went wrong');
 
 **Structured Logging** (console only, for debugging):
 ```typescript
-import { logWarn, logError, LogCategory } from '@/lib/logger';
+import { log, LogCategory } from '@/lib/logger';
 
 // All logs prefixed with [cbdb] for easy filtering in devtools
-logWarn(LogCategory.COVER, 'Failed to fetch cover', error);
-logError(LogCategory.DATABASE, 'Validation failed', error);
+log.debug(LogCategory.CACHE, 'Checking cache', { key });
+log.info(LogCategory.DATABASE, 'Database loaded');
+log.warn(LogCategory.COVER, 'Failed to fetch cover', error);
+log.error(LogCategory.DATABASE, 'Validation failed', error);
 ```
 
 **Available log categories:** `COVER`, `CACHE`, `QUERY`, `DATABASE`, `NETWORK`

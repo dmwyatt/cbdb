@@ -8,7 +8,7 @@
  */
 
 import { getErrorMessage } from './utils';
-import { logError, LogCategory } from './logger';
+import { log, LogCategory } from './logger';
 
 type ErrorSetter = ((error: string) => void) | null;
 
@@ -29,7 +29,7 @@ export function initGlobalErrorHandler(fn: (error: string) => void): void {
 export function showGlobalError(error: unknown): void {
   const message = getErrorMessage(error);
 
-  logError(LogCategory.NETWORK, message, error);
+  log.error(LogCategory.NETWORK, message, error);
 
   if (setErrorFn) {
     setErrorFn(message);

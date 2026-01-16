@@ -11,7 +11,7 @@ import { saveToCache, loadFromCache, clearCache, getCacheTimestamp } from '@/lib
 import { queryService } from '@/lib/queryService';
 import { offlineService } from '@/lib/offlineService';
 import { initGlobalErrorHandler } from '@/lib/errorService';
-import { logWarn, logError, LogCategory } from '@/lib/logger';
+import { log, LogCategory } from '@/lib/logger';
 import { getErrorMessage } from '@/lib/utils';
 import { type LibraryPath, createLibraryPath, toLibraryPath } from '@/types/libraryPath';
 
@@ -118,7 +118,7 @@ export const useLibraryStore = create<LibraryState>()(
                 });
               }
             } catch (cacheError) {
-              logWarn(LogCategory.CACHE, 'Cache read failed, will download fresh', cacheError);
+              log.warn(LogCategory.CACHE, 'Cache read failed, will download fresh', cacheError);
               await clearCache();
               dbData = null;
             }
@@ -148,7 +148,7 @@ export const useLibraryStore = create<LibraryState>()(
               await saveToCache(dbData, libraryPath);
               syncTime = Date.now();
             } catch (cacheError) {
-              logWarn(LogCategory.CACHE, 'Failed to cache database', cacheError);
+              log.warn(LogCategory.CACHE, 'Failed to cache database', cacheError);
               syncTime = Date.now(); // Still track sync time even if caching fails
             }
           }
@@ -163,7 +163,7 @@ export const useLibraryStore = create<LibraryState>()(
               throw new Error('Database validation failed');
             }
           } catch (dbError) {
-            logError(LogCategory.DATABASE, 'Database validation failed', dbError);
+            log.error(LogCategory.DATABASE, 'Database validation failed', dbError);
             if (get().loadedFromCache) {
               // Cache was corrupted, clear and retry
               await clearCache();
@@ -186,7 +186,7 @@ export const useLibraryStore = create<LibraryState>()(
             currentPage: 1,
           });
         } catch (error) {
-          logError(LogCategory.DATABASE, 'Failed to load database', error);
+          log.error(LogCategory.DATABASE, 'Failed to load database', error);
           const errorMessage = getErrorMessage(error, 'Failed to load database');
 
           // Always clear loading state

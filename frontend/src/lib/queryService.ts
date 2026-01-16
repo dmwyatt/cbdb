@@ -1,7 +1,7 @@
 import type { BookDetail, BooksResult } from '@/types/book';
 import type { SqlJsDatabase } from './sql';
 import { getBooks, searchBooks, getBookDetail } from './sql';
-import { logWarn, LogCategory } from './logger';
+import { log, LogCategory } from './logger';
 
 /**
  * Result types that include query timing information
@@ -60,7 +60,7 @@ class QueryService {
       return { data: result, queryTime };
     } catch (error) {
       const queryTime = performance.now() - startTime;
-      logWarn(LogCategory.QUERY, 'getBooks query failed', error);
+      log.warn(LogCategory.QUERY, 'getBooks query failed', error);
       return {
         data: { books: [], total: 0 },
         queryTime,
@@ -86,7 +86,7 @@ class QueryService {
       return { data: result, queryTime };
     } catch (error) {
       const queryTime = performance.now() - startTime;
-      logWarn(LogCategory.QUERY, 'searchBooks query failed', error);
+      log.warn(LogCategory.QUERY, 'searchBooks query failed', error);
       return {
         data: { books: [], total: 0 },
         queryTime,
@@ -109,7 +109,7 @@ class QueryService {
       return { data: result, queryTime };
     } catch (error) {
       const queryTime = performance.now() - startTime;
-      logWarn(LogCategory.QUERY, 'getBookDetail query failed', error);
+      log.warn(LogCategory.QUERY, 'getBookDetail query failed', error);
       return { data: null, queryTime };
     }
   }
