@@ -78,6 +78,8 @@ export function getBooks(
       b.path,
       b.has_cover,
       b.series_index,
+      -- Note: SQLite GROUP_CONCAT doesn't support DISTINCT with separator.
+      -- GROUP_CONCAT(DISTINCT col, sep) errors. Use GROUP_CONCAT(col, sep).
       GROUP_CONCAT(a.name, ' & ') as authors,
       s.name as series,
       r.rating
