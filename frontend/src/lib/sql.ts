@@ -375,7 +375,7 @@ export function getBooksByFilters(
   const total = countStmt.get()[0] as number;
   countStmt.free();
 
-  // Main query
+  // Main query - use string interpolation for LIMIT/OFFSET (safe since they're numbers)
   const query = `
     SELECT DISTINCT
       b.id,
@@ -398,11 +398,27 @@ export function getBooksByFilters(
     ${whereClause}
     GROUP BY b.id
     ORDER BY ${orderBy}
-    LIMIT ? OFFSET ?
+    LIMIT ${perPage} OFFSET ${offset}
   `;
 
+  // If no filter params, use exec() for simpler execution
+  if (params.length === 0) {
+    const result = db.exec(query);
+    if (!result.length) return { books: [], total };
+    const columns = result[0].columns;
+    const books = result[0].values.map((row) => {
+      const obj: Record<string, unknown> = {};
+      columns.forEach((col, i) => {
+        obj[col] = row[i];
+      });
+      return obj as unknown as Book;
+    });
+    return { books, total };
+  }
+
+  // Use prepared statement for filter params
   const stmt = db.prepare(query);
-  stmt.bind([...params, perPage, offset]);
+  stmt.bind(params);
 
   const books: Book[] = [];
   while (stmt.step()) {
