@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StarRating } from '@/components/common/StarRating';
 import { DownloadButton } from './DownloadButton';
@@ -60,9 +62,9 @@ export function BookModal() {
             </DialogHeader>
 
             <div className="space-y-4 mt-4">
-              <div className="flex gap-6">
+              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
                 {/* Cover image */}
-                <div className="w-32 h-44 bg-slate-100 rounded flex-shrink-0 flex items-center justify-center overflow-hidden">
+                <div className="w-32 h-44 bg-slate-100 rounded flex-shrink-0 flex items-center justify-center overflow-hidden mx-auto sm:mx-0">
                   {coverUrl ? (
                     <img
                       src={`data:image/jpeg;base64,${coverUrl}`}
@@ -160,6 +162,13 @@ export function BookModal() {
                 Query time: {queryTime.toFixed(1)}ms
               </p>
             </div>
+
+            {/* Mobile-friendly close button - visible on small screens where browser chrome may obscure the X button */}
+            <DialogFooter className="sm:hidden mt-4 pt-4 border-t">
+              <Button variant="outline" onClick={handleClose} className="w-full">
+                Close
+              </Button>
+            </DialogFooter>
           </>
         )}
       </DialogContent>
