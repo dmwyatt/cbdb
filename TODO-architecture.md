@@ -56,22 +56,31 @@ Consider splitting into multiple stores or using selectors.
 
 ### Unify error handling patterns
 
-**Files**: `frontend/src/lib/errorService.ts`, multiple components and services
+**Files**: `frontend/src/lib/errorService.ts`, `frontend/src/lib/logger.ts`, `frontend/src/lib/utils.ts`
 
-Created `errorService` singleton with three methods for different error scenarios:
-- `handleUserError(error, prefix?)` - For user-actionable errors that should display in UI
-- `logBackground(error, context)` - For non-critical errors (cover fetches, cache) that log but don't interrupt
-- `log(error, context)` - For internal debugging and recoverable errors
+Separated concerns into three modules:
 
-Updated components to use consistent error handling:
-- `DownloadButton.tsx`: Uses `handleUserError()` for download failures
-- `BookDetailPage.tsx`: Uses `logBackground()` for cover fetch failures
-- `libraryStore.ts`: Uses `logBackground()` for cache issues, `log()` for database validation
-- `queryService.ts`: Uses `logBackground()` for query failures
-- `coverService.ts`: Uses `logBackground()` for batch fetch failures
-- `useCovers.ts`: Uses `logBackground()` for cover loading failures
+**1. Global Error Service** (`errorService.ts`):
+- `showGlobalError(error)` - Shows user-facing error in modal dialog, also logs
+- `initGlobalErrorHandler(fn)` - Connects to store's setError function
+- Single responsibility: display errors to users
 
-The errorService is initialized with the store's `setError` function when `libraryStore.ts` loads, allowing components to show user errors without directly importing the store.
+**2. Structured Logger** (`logger.ts`):
+- `logWarn(category, message, error?)` and `logError(category, message, error?)`
+- App prefix `[cbdb]` for filtering in devtools
+- Typed categories: `COVER`, `CACHE`, `QUERY`, `DATABASE`, `NETWORK`
+- No arbitrary strings - categories are constrained
+
+**3. Utility** (`utils.ts`):
+- `getErrorMessage(error, fallback)` - Extract message from unknown error type
+
+Updated components:
+- `DownloadButton.tsx`: Uses `showGlobalError()` for download failures
+- `BookDetailPage.tsx`: Uses `logWarn(LogCategory.COVER, ...)` for cover fetch
+- `libraryStore.ts`: Uses `logWarn`/`logError` for cache and database issues
+- `queryService.ts`: Uses `logWarn(LogCategory.QUERY, ...)` for query failures
+- `coverService.ts`: Uses `logWarn(LogCategory.COVER, ...)` for batch fetch failures
+- `useCovers.ts`: Uses `logWarn(LogCategory.COVER, ...)` for cover loading
 
 Documented the pattern in AGENTS.md under "Error Handling" section.
 

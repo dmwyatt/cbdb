@@ -76,7 +76,7 @@ frontend/               # React + TypeScript + Vite app
 - Types/interfaces in `src/types/`
 - SQL queries must use prepared statements with `?` placeholders
 - State management via Zustand store
-- Error handling via `errorService` (see below)
+- Error handling via `errorService` and `logger` (see below)
 
 ### CSS
 - Tailwind CSS utility classes
@@ -84,29 +84,38 @@ frontend/               # React + TypeScript + Vite app
 - Custom styles in `src/index.css`
 
 ### Error Handling
-Use `errorService` (`frontend/src/lib/errorService.ts`) for consistent error handling:
 
+**Global Errors** (user-facing modal):
 ```typescript
-import { errorService } from '@/lib/errorService';
+import { showGlobalError } from '@/lib/errorService';
 
-// User-actionable errors - displays in UI via store
-errorService.handleUserError(error, 'Download failed');
-
-// Background errors - logs but doesn't interrupt user
-// Use for: cover fetch failures, cache issues, non-critical operations
-errorService.logBackground(error, 'cover-fetch');
-
-// Debug/internal errors - for development logging
-errorService.log(error, 'operation-name');
-
-// Extract message from unknown error
-const message = errorService.getMessage(error, 'fallback message');
+// Shows error in modal dialog, also logs to console
+showGlobalError(error);
+showGlobalError('Something went wrong');
 ```
 
-**When to use each method:**
-- `handleUserError()`: Download failures, validation errors, network issues user needs to know about
-- `logBackground()`: Cover loading failures, cache issues, optional features failing
-- `log()`: Internal debugging, recoverable errors, expected failures
+**Structured Logging** (console only, for debugging):
+```typescript
+import { logWarn, logError, LogCategory } from '@/lib/logger';
+
+// All logs prefixed with [cbdb] for easy filtering in devtools
+logWarn(LogCategory.COVER, 'Failed to fetch cover', error);
+logError(LogCategory.DATABASE, 'Validation failed', error);
+```
+
+**Available log categories:** `COVER`, `CACHE`, `QUERY`, `DATABASE`, `NETWORK`
+
+**Utility:**
+```typescript
+import { getErrorMessage } from '@/lib/utils';
+
+// Extract message from unknown error type
+const message = getErrorMessage(error, 'fallback message');
+```
+
+**When to use:**
+- `showGlobalError()`: User needs to know (download failed, offline, validation errors)
+- `logWarn()`/`logError()`: Debug logging (cover fetch, cache, query failures)
 
 ## Security Requirements
 
