@@ -76,11 +76,37 @@ frontend/               # React + TypeScript + Vite app
 - Types/interfaces in `src/types/`
 - SQL queries must use prepared statements with `?` placeholders
 - State management via Zustand store
+- Error handling via `errorService` (see below)
 
 ### CSS
 - Tailwind CSS utility classes
 - shadcn/ui components for consistent design
 - Custom styles in `src/index.css`
+
+### Error Handling
+Use `errorService` (`frontend/src/lib/errorService.ts`) for consistent error handling:
+
+```typescript
+import { errorService } from '@/lib/errorService';
+
+// User-actionable errors - displays in UI via store
+errorService.handleUserError(error, 'Download failed');
+
+// Background errors - logs but doesn't interrupt user
+// Use for: cover fetch failures, cache issues, non-critical operations
+errorService.logBackground(error, 'cover-fetch');
+
+// Debug/internal errors - for development logging
+errorService.log(error, 'operation-name');
+
+// Extract message from unknown error
+const message = errorService.getMessage(error, 'fallback message');
+```
+
+**When to use each method:**
+- `handleUserError()`: Download failures, validation errors, network issues user needs to know about
+- `logBackground()`: Cover loading failures, cache issues, optional features failing
+- `log()`: Internal debugging, recoverable errors, expected failures
 
 ## Security Requirements
 

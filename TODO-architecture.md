@@ -52,24 +52,30 @@ Consider splitting into multiple stores or using selectors.
 
 ---
 
+## Completed
+
 ### Unify error handling patterns
 
-**Files**: Throughout frontend
+**Files**: `frontend/src/lib/errorService.ts`, multiple components and services
 
-Current inconsistency:
-- `SetupForm`: calls `store.setError()`
-- `DownloadButton`: catches and calls `store.setError()`
-- `BookModal`: silently swallows cover fetch errors
-- Various: `console.error()` only
+Created `errorService` singleton with three methods for different error scenarios:
+- `handleUserError(error, prefix?)` - For user-actionable errors that should display in UI
+- `logBackground(error, context)` - For non-critical errors (cover fetches, cache) that log but don't interrupt
+- `log(error, context)` - For internal debugging and recoverable errors
 
-**Solution**:
-1. Create error handling strategy (which errors show to users vs log only)
-2. Create `ErrorService` or use React Error Boundary
-3. Document pattern in AGENTS.md
+Updated components to use consistent error handling:
+- `DownloadButton.tsx`: Uses `handleUserError()` for download failures
+- `BookDetailPage.tsx`: Uses `logBackground()` for cover fetch failures
+- `libraryStore.ts`: Uses `logBackground()` for cache issues, `log()` for database validation
+- `queryService.ts`: Uses `logBackground()` for query failures
+- `coverService.ts`: Uses `logBackground()` for batch fetch failures
+- `useCovers.ts`: Uses `logBackground()` for cover loading failures
+
+The errorService is initialized with the store's `setError` function when `libraryStore.ts` loads, allowing components to show user errors without directly importing the store.
+
+Documented the pattern in AGENTS.md under "Error Handling" section.
 
 ---
-
-## Completed
 
 ### Add type safety for library path
 

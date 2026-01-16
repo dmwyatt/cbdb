@@ -8,6 +8,7 @@ import { DownloadButton } from './DownloadButton';
 import { useLibraryStore } from '@/store/libraryStore';
 import { queryService } from '@/lib/queryService';
 import { coverService } from '@/lib/coverService';
+import { errorService } from '@/lib/errorService';
 import type { BookDetail } from '@/types/book';
 
 // Animation constants
@@ -89,7 +90,7 @@ export function BookDetailPage() {
           setCoverUrl(cover);
         }
       }).catch((e) => {
-        console.error('Failed to fetch cover:', e);
+        errorService.logBackground(e, 'cover-fetch');
       });
     } else {
       setCoverUrl(null);

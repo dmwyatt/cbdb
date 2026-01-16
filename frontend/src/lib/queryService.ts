@@ -1,6 +1,7 @@
 import type { BookDetail, BooksResult } from '@/types/book';
 import type { SqlJsDatabase } from './sql';
 import { getBooks, searchBooks, getBookDetail } from './sql';
+import { errorService } from './errorService';
 
 /**
  * Result types that include query timing information
@@ -59,7 +60,7 @@ class QueryService {
       return { data: result, queryTime };
     } catch (error) {
       const queryTime = performance.now() - startTime;
-      console.error('QueryService.getBooks failed:', error);
+      errorService.logBackground(error, 'query-getBooks');
       return {
         data: { books: [], total: 0 },
         queryTime,
@@ -85,7 +86,7 @@ class QueryService {
       return { data: result, queryTime };
     } catch (error) {
       const queryTime = performance.now() - startTime;
-      console.error('QueryService.searchBooks failed:', error);
+      errorService.logBackground(error, 'query-searchBooks');
       return {
         data: { books: [], total: 0 },
         queryTime,
@@ -108,7 +109,7 @@ class QueryService {
       return { data: result, queryTime };
     } catch (error) {
       const queryTime = performance.now() - startTime;
-      console.error('QueryService.getBookDetail failed:', error);
+      errorService.logBackground(error, 'query-getBookDetail');
       return { data: null, queryTime };
     }
   }

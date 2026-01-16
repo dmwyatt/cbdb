@@ -1,5 +1,6 @@
 import { fetchCovers } from '@/lib/api';
 import { getCachedCovers, saveCachedCovers } from '@/lib/indexeddb';
+import { errorService } from '@/lib/errorService';
 import type { LibraryPath } from '@/types/libraryPath';
 
 const BATCH_SIZE = 25;
@@ -115,7 +116,7 @@ class CoverService {
           resolvers.get(path)?.(data);
         }
       } catch (e) {
-        console.error('Failed to fetch covers batch:', e);
+        errorService.logBackground(e, 'cover-batch-fetch');
         // Resolve with null on error
         for (const path of batch) {
           resolvers.get(path)?.(null);

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { getDownloadLink } from '@/lib/api';
 import { formatBytes } from '@/lib/utils';
 import { useLibraryStore } from '@/store/libraryStore';
+import { errorService } from '@/lib/errorService';
 import type { BookFormat } from '@/types/book';
 
 interface DownloadButtonProps {
@@ -12,11 +13,11 @@ interface DownloadButtonProps {
 
 export function DownloadButton({ format, bookPath }: DownloadButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const { libraryPath, setError } = useLibraryStore();
+  const { libraryPath } = useLibraryStore();
 
   const handleDownload = async () => {
     if (!libraryPath) {
-      setError('Library path not configured');
+      errorService.handleUserError('Library path not configured');
       return;
     }
 
@@ -26,8 +27,7 @@ export function DownloadButton({ format, bookPath }: DownloadButtonProps) {
       const link = await getDownloadLink(libraryPath, filePath);
       window.open(link, '_blank');
     } catch (error) {
-      console.error('Download failed:', error);
-      setError('Download failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      errorService.handleUserError(error, 'Download failed');
     } finally {
       setIsLoading(false);
     }
