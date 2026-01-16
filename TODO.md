@@ -2,7 +2,7 @@
 
 Potential new features for the Calibre Library Web App.
 
-## 1. Advanced Filtering & Sorting
+## 1. ~~Advanced Filtering & Sorting~~ ✓ DONE
 
 Add a filter panel to narrow down books by:
 
