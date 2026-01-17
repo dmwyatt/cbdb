@@ -95,6 +95,7 @@ export function EpubReader({ bookData, bookId, bookTitle, onClose }: EpubReaderP
           height: '100%',
           spread: 'none',
           flow: 'paginated',
+          allowScriptedContent: true,
         });
 
         renditionRef.current = rendition;
@@ -154,6 +155,34 @@ export function EpubReader({ bookData, bookId, bookTitle, onClose }: EpubReaderP
             rendition.next();
           } else {
             setShowControls((prev) => !prev);
+          }
+        });
+
+        // Handle swipe gestures for mobile
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        rendition.on('touchstart', (e: TouchEvent) => {
+          touchStartX = e.changedTouches[0].clientX;
+          touchStartY = e.changedTouches[0].clientY;
+        });
+
+        rendition.on('touchend', (e: TouchEvent) => {
+          const touchEndX = e.changedTouches[0].clientX;
+          const touchEndY = e.changedTouches[0].clientY;
+          const deltaX = touchEndX - touchStartX;
+          const deltaY = touchEndY - touchStartY;
+
+          // Only trigger if horizontal swipe is greater than vertical (not scrolling)
+          // and swipe distance is significant (> 50px)
+          if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+            if (deltaX > 0) {
+              // Swipe right = previous page
+              rendition.prev();
+            } else {
+              // Swipe left = next page
+              rendition.next();
+            }
           }
         });
 
