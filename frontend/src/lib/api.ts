@@ -4,6 +4,17 @@ import type { LibraryPath } from '@/types/libraryPath';
 
 const AUTH_STORAGE_KEY = 'calibre-app-password';
 
+// Callback for successful Dropbox API calls - used to auto-dismiss error banner
+let onDropboxSuccess: (() => void) | null = null;
+
+/**
+ * Set the callback for successful Dropbox API calls.
+ * This should be called once by the store to wire up auto-dismiss of error banner.
+ */
+export function setDropboxSuccessHandler(handler: () => void): void {
+  onDropboxSuccess = handler;
+}
+
 /**
  * Custom error class for Dropbox authentication failures.
  * Thrown when the Dropbox token is expired or invalid.
@@ -62,6 +73,8 @@ export async function downloadDatabase(libraryPath: LibraryPath): Promise<Uint8A
     }
 
     const arrayBuffer = await response.arrayBuffer();
+    // Successful Dropbox API call - auto-dismiss any error banner
+    onDropboxSuccess?.();
     return new Uint8Array(arrayBuffer);
   } catch (error) {
     clearTimeout(timeoutId);
@@ -102,6 +115,8 @@ export async function getDownloadLink(
       throw new Error(data.error || 'Failed to get download link');
     }
 
+    // Successful Dropbox API call - auto-dismiss any error banner
+    onDropboxSuccess?.();
     return data.link;
   } catch (error) {
     clearTimeout(timeoutId);
@@ -142,6 +157,8 @@ export async function fetchCovers(
       throw new Error(data.error || 'Failed to fetch covers');
     }
 
+    // Successful Dropbox API call - auto-dismiss any error banner
+    onDropboxSuccess?.();
     return data.covers || {};
   } catch (error) {
     clearTimeout(timeoutId);
