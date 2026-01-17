@@ -31,7 +31,7 @@ import {
 } from '@/lib/indexeddb';
 
 interface EpubReaderProps {
-  bookUrl: string;
+  bookData: ArrayBuffer;
   bookId: number;
   bookTitle: string;
   onClose: () => void;
@@ -47,7 +47,7 @@ const MIN_FONT_SIZE = 12;
 const MAX_FONT_SIZE = 32;
 const DEFAULT_FONT_SIZE = 16;
 
-export function EpubReader({ bookUrl, bookId, bookTitle, onClose }: EpubReaderProps) {
+export function EpubReader({ bookData, bookId, bookTitle, onClose }: EpubReaderProps) {
   const viewerRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<Book | null>(null);
   const renditionRef = useRef<Rendition | null>(null);
@@ -81,7 +81,7 @@ export function EpubReader({ bookUrl, bookId, bookTitle, onClose }: EpubReaderPr
     if (!viewerRef.current) return;
 
     let mounted = true;
-    const book = ePub(bookUrl);
+    const book = ePub(bookData);
     bookRef.current = book;
 
     const initBook = async () => {
@@ -166,7 +166,7 @@ export function EpubReader({ bookUrl, bookId, bookTitle, onClose }: EpubReaderPr
       renditionRef.current = null;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookUrl, bookId]);
+  }, [bookData, bookId]);
 
   // Update font size when changed
   useEffect(() => {

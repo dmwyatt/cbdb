@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { EpubReader } from './EpubReader';
 import { useLibraryStore } from '@/store/libraryStore';
 import { queryService } from '@/lib/queryService';
-import { getDownloadLink } from '@/lib/api';
+import { fetchBookContent } from '@/lib/api';
 import { log, LogCategory } from '@/lib/logger';
 import { showGlobalError } from '@/lib/errorService';
 import type { BookDetail } from '@/types/book';
@@ -14,8 +14,9 @@ export function EpubReaderPage() {
   const { db, libraryPath } = useLibraryStore();
 
   const [book, setBook] = useState<BookDetail | null>(null);
-  const [epubUrl, setEpubUrl] = useState<string | null>(null);
+  const [epubData, setEpubData] = useState<ArrayBuffer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState('Loading reader...');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -50,17 +51,20 @@ export function EpubReaderPage() {
 
     setBook(detail);
 
-    // Get download link for the EPUB
+    // Download the EPUB file
     const loadEpub = async () => {
       try {
         const filePath = `${detail.path}/${epubFormat.name}.epub`;
-        log.info(LogCategory.READER, 'Fetching EPUB download link', { filePath });
+        log.info(LogCategory.READER, 'Downloading EPUB content', { filePath });
+        setLoadingMessage('Downloading book...');
 
-        const link = await getDownloadLink(libraryPath, filePath);
-        setEpubUrl(link);
+        const content = await fetchBookContent(libraryPath, filePath);
+        log.info(LogCategory.READER, 'EPUB downloaded', { size: content.byteLength });
+
+        setEpubData(content);
         setIsLoading(false);
       } catch (err) {
-        log.error(LogCategory.READER, 'Failed to get EPUB download link', err);
+        log.error(LogCategory.READER, 'Failed to download EPUB', err);
         setError(err instanceof Error ? err.message : 'Failed to load book');
         setIsLoading(false);
       }
@@ -90,7 +94,7 @@ export function EpubReaderPage() {
       <div className="fixed inset-0 bg-white z-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading reader...</p>
+          <p className="text-slate-600">{loadingMessage}</p>
         </div>
       </div>
     );
@@ -110,13 +114,13 @@ export function EpubReaderPage() {
     );
   }
 
-  if (!book || !epubUrl) {
+  if (!book || !epubData) {
     return null;
   }
 
   return (
     <EpubReader
-      bookUrl={epubUrl}
+      bookData={epubData}
       bookId={book.id}
       bookTitle={book.title}
       onClose={handleClose}

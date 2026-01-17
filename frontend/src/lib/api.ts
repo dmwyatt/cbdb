@@ -127,6 +127,56 @@ export async function getDownloadLink(
   }
 }
 
+export async function fetchBookContent(
+  libraryPath: LibraryPath,
+  filePath: string
+): Promise<ArrayBuffer> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout for large files
+
+  try {
+    const response = await fetch(
+      `/api/book-content?path=${encodeURIComponent(filePath)}`,
+      {
+        headers: {
+          ...getAuthHeaders(),
+          'X-Library-Path': libraryPath,
+        },
+        signal: controller.signal,
+      }
+    );
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      let errorMsg = 'Failed to download book';
+      let errorCode: string | undefined;
+      try {
+        const error = await response.json();
+        errorMsg = error.error || errorMsg;
+        errorCode = error.error_code;
+      } catch {
+        // Response wasn't JSON
+      }
+      if (errorCode === ERROR_CODES.DROPBOX_AUTH_FAILED) {
+        throw new DropboxAuthError(errorMsg);
+      }
+      throw new Error(errorMsg);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    // Successful Dropbox API call - auto-dismiss any error banner
+    onDropboxSuccess?.();
+    return arrayBuffer;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timed out. The book file may be too large or your connection is slow.');
+    }
+    throw error;
+  }
+}
+
 export async function fetchCovers(
   libraryPath: LibraryPath,
   bookPaths: string[]
