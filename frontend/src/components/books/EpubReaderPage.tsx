@@ -74,11 +74,9 @@ export function EpubReaderPage() {
   }, [db, id, libraryPath, navigate]);
 
   const handleClose = () => {
-    if (book) {
-      navigate(`/book/${book.id}`);
-    } else {
-      navigate('/');
-    }
+    // Go back in history instead of pushing new route to avoid
+    // back button returning to reader
+    navigate(-1);
   };
 
   if (!libraryPath) {
