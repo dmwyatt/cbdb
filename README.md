@@ -43,7 +43,7 @@ A browser-based Calibre e-book library viewer that runs SQLite queries directly 
 4. Select this repository
 5. In Railway dashboard → Variables → Add:
    - `DROPBOX_ACCESS_TOKEN` → Your Dropbox access token from Step 1
-   - `APP_PASSWORD` → A password to protect your library (recommended)
+   - `APP_PASSWORD` → A password to protect your library (required)
 6. Railway builds and deploys automatically
 
 ### Step 3: First-Time Setup (In Browser)
@@ -162,7 +162,7 @@ cbdb/
 
 ## Security Notes
 
-- **Password protection**: Set `APP_PASSWORD` to require authentication (recommended for public deployments)
+- **Password protection**: `APP_PASSWORD` environment variable is required for all deployments
 - Your Dropbox access token is stored securely on the server (never sent to browser)
 - All SQL queries use parameterized statements (prevents injection)
 - React handles HTML escaping (prevents XSS)
