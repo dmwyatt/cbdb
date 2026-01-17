@@ -4,13 +4,15 @@ A browser-based Calibre e-book library viewer that runs SQLite queries directly 
 
 ## Features
 
-- Browse your entire Calibre library with grid or table view
-- Search books by title or author
-- View detailed book information (authors, series, ratings, tags, formats, descriptions)
-- Book cover thumbnails via Dropbox batch API
+- Browse your Calibre library with grid or table view
+- Instant search by title or author (runs locally via WASM)
+- Filter by tags, series, publisher, format, or rating
+- Sort by title, author, rating, date published, or date added
+- View detailed book info with covers, descriptions, and metadata
 - Download books directly from Dropbox
-- Offline-capable after initial sync (database cached in browser)
-- Clean, responsive design that works on mobile
+- Offline-capable after initial sync
+- Password-protected access
+- Responsive design for mobile and desktop
 
 See [FEATURES.md](FEATURES.md) for a complete list of features.
 
