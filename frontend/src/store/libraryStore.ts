@@ -6,7 +6,7 @@ import {
   validateDatabase,
   type SqlJsDatabase,
 } from '@/lib/sql';
-import { downloadDatabase, isDropboxAuthError } from '@/lib/api';
+import { downloadDatabase, isDropboxAuthError, setDropboxSuccessHandler } from '@/lib/api';
 import { saveToCache, loadFromCache, clearCache, getCacheTimestamp } from '@/lib/indexeddb';
 import { queryService } from '@/lib/queryService';
 import { offlineService } from '@/lib/offlineService';
@@ -351,4 +351,9 @@ initGlobalErrorHandler((error: string) => {
 // Initialize Dropbox auth error handler for cover service
 setDropboxAuthErrorHandler((error: string) => {
   useLibraryStore.getState().setDropboxError(error);
+});
+
+// Initialize Dropbox success handler to auto-dismiss error banner
+setDropboxSuccessHandler(() => {
+  useLibraryStore.getState().clearDropboxError();
 });
