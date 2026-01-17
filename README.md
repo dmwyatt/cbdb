@@ -4,13 +4,17 @@ A browser-based Calibre e-book library viewer that runs SQLite queries directly 
 
 ## Features
 
-- Browse your entire Calibre library with grid or table view
-- Search books by title or author
-- View detailed book information (authors, series, ratings, tags, formats, descriptions)
-- Book cover thumbnails via Dropbox batch API
+- Browse your Calibre library with grid or table view
+- Instant search by title or author (runs locally via WASM)
+- Filter by tags, series, publisher, format, or rating
+- Sort by title, author, rating, date published, or date added
+- View detailed book info with covers, descriptions, and metadata
 - Download books directly from Dropbox
-- Offline-capable after initial sync (database cached in browser)
-- Clean, responsive design that works on mobile
+- Offline-capable after initial sync
+- Password-protected access
+- Responsive design for mobile and desktop
+
+See [FEATURES.md](FEATURES.md) for a complete list of features.
 
 ## Tech Stack
 
@@ -43,7 +47,7 @@ A browser-based Calibre e-book library viewer that runs SQLite queries directly 
 4. Select this repository
 5. In Railway dashboard → Variables → Add:
    - `DROPBOX_ACCESS_TOKEN` → Your Dropbox access token from Step 1
-   - `APP_PASSWORD` → A password to protect your library (recommended)
+   - `APP_PASSWORD` → A password to protect your library (required)
 6. Railway builds and deploys automatically
 
 ### Step 3: First-Time Setup (In Browser)
@@ -162,7 +166,7 @@ cbdb/
 
 ## Security Notes
 
-- **Password protection**: Set `APP_PASSWORD` to require authentication (recommended for public deployments)
+- **Password protection**: `APP_PASSWORD` environment variable is required for all deployments
 - Your Dropbox access token is stored securely on the server (never sent to browser)
 - All SQL queries use parameterized statements (prevents injection)
 - React handles HTML escaping (prevents XSS)
