@@ -128,12 +128,32 @@ export function EpubReader({ bookData, bookId, bookTitle, onClose }: EpubReaderP
           saveProgress(cfi, pct);
         });
 
-        // Handle keyboard navigation
+        // Handle keyboard navigation inside iframe
         rendition.on('keyup', (e: KeyboardEvent) => {
           if (e.key === 'ArrowLeft') {
             rendition.prev();
           } else if (e.key === 'ArrowRight') {
             rendition.next();
+          }
+        });
+
+        // Handle tap/click navigation inside iframe (for mobile)
+        rendition.on('click', (e: MouseEvent) => {
+          // Get the iframe's dimensions
+          const iframe = viewerRef.current?.querySelector('iframe');
+          if (!iframe) return;
+
+          const width = iframe.clientWidth;
+          const clickX = e.clientX;
+          const clickPosition = clickX / width;
+
+          // Left 25% = previous, Right 25% = next, Middle = toggle controls
+          if (clickPosition < 0.25) {
+            rendition.prev();
+          } else if (clickPosition > 0.75) {
+            rendition.next();
+          } else {
+            setShowControls((prev) => !prev);
           }
         });
 
