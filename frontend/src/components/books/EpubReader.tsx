@@ -230,8 +230,22 @@ export function EpubReader({ bookData, bookId, bookTitle, onClose }: EpubReaderP
     setFontSize((prev) => Math.max(prev - 2, MIN_FONT_SIZE));
   };
 
-  const toggleControls = () => {
-    setShowControls((prev) => !prev);
+  const handleReaderClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const width = rect.width;
+    const clickPosition = x / width;
+
+    // Left 25% = previous page
+    // Right 25% = next page
+    // Middle 50% = toggle controls
+    if (clickPosition < 0.25) {
+      handlePrev();
+    } else if (clickPosition > 0.75) {
+      handleNext();
+    } else {
+      setShowControls((prev) => !prev);
+    }
   };
 
   const renderTocItems = (items: TocItem[], depth = 0) => {
@@ -335,10 +349,10 @@ export function EpubReader({ bookData, bookId, bookTitle, onClose }: EpubReaderP
         </div>
       </div>
 
-      {/* Reader content */}
+      {/* Reader content with tap zones */}
       <div
-        className="flex-1 relative overflow-hidden cursor-pointer"
-        onClick={toggleControls}
+        className="flex-1 relative overflow-hidden"
+        onClick={handleReaderClick}
       >
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white">
