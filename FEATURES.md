@@ -12,7 +12,7 @@ Calibre Library Web App - a browser-based viewer for your Calibre e-book library
 
 ## Authentication
 
-- **Optional Password Protection**: Server-side access control via APP_PASSWORD environment variable
+- **Password Protection**: Server-side access control via APP_PASSWORD environment variable (required)
 - **Login Form**: Password authentication compatible with password managers
 - **Session Management**: Authentication token stored locally
 - **Logout**: Return to login screen when needed
