@@ -12,6 +12,8 @@ A browser-based Calibre e-book library viewer that runs SQLite queries directly 
 - Offline-capable after initial sync (database cached in browser)
 - Clean, responsive design that works on mobile
 
+See [FEATURES.md](FEATURES.md) for a complete list of features.
+
 ## Tech Stack
 
 - **Backend**: Flask 3.0, Python 3.11
