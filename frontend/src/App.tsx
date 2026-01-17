@@ -5,6 +5,7 @@ import { Footer } from '@/components/layout/Footer';
 import { SetupForm } from '@/components/setup/SetupForm';
 import { Library } from '@/components/books/Library';
 import { BookDetailPage } from '@/components/books/BookDetailPage';
+import { EpubReaderPage } from '@/components/books/EpubReaderPage';
 import { LoadingOverlay } from '@/components/common/LoadingOverlay';
 import { ErrorAlert } from '@/components/common/ErrorAlert';
 import { DropboxErrorBanner } from '@/components/common/DropboxErrorBanner';
@@ -107,6 +108,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Library />} />
             <Route path="/book/:id" element={<BookDetailPage />} />
+            <Route path="/book/:id/read" element={<EpubReaderPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         )}

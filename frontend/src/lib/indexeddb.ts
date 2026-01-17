@@ -1,9 +1,10 @@
 import type { LibraryPath } from '@/types/libraryPath';
 
 const DB_NAME = 'CalibreWASM';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = 'cache';
 const COVERS_STORE = 'covers';
+const READING_PROGRESS_STORE = 'reading_progress';
 const DB_CACHE_KEY = 'calibreMetadataDB';
 
 function openCacheDB(): Promise<IDBDatabase> {
@@ -18,6 +19,9 @@ function openCacheDB(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(COVERS_STORE)) {
         db.createObjectStore(COVERS_STORE);
+      }
+      if (!db.objectStoreNames.contains(READING_PROGRESS_STORE)) {
+        db.createObjectStore(READING_PROGRESS_STORE);
       }
     };
   });
@@ -167,5 +171,95 @@ export async function clearCoversCache(): Promise<void> {
     store.clear();
   } catch (e) {
     console.warn('Failed to clear covers cache:', e);
+  }
+}
+
+// Reading progress types and functions
+export interface ReadingProgress {
+  bookId: number;
+  cfi: string; // EPUB CFI location
+  percentage: number; // 0-100
+  lastRead: number; // timestamp
+}
+
+export async function saveReadingProgress(
+  progress: ReadingProgress
+): Promise<void> {
+  try {
+    const cacheDB = await openCacheDB();
+    const tx = cacheDB.transaction(READING_PROGRESS_STORE, 'readwrite');
+    const store = tx.objectStore(READING_PROGRESS_STORE);
+    store.put(progress, `book_${progress.bookId}`);
+
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (e) {
+    console.warn('Failed to save reading progress:', e);
+  }
+}
+
+export async function getReadingProgress(
+  bookId: number
+): Promise<ReadingProgress | null> {
+  try {
+    const cacheDB = await openCacheDB();
+    const tx = cacheDB.transaction(READING_PROGRESS_STORE, 'readonly');
+    const store = tx.objectStore(READING_PROGRESS_STORE);
+
+    const progress = await new Promise<ReadingProgress | undefined>(
+      (resolve, reject) => {
+        const req = store.get(`book_${bookId}`);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      }
+    );
+
+    return progress || null;
+  } catch (e) {
+    console.warn('Failed to get reading progress:', e);
+    return null;
+  }
+}
+
+export async function getAllReadingProgress(): Promise<Record<number, ReadingProgress>> {
+  try {
+    const cacheDB = await openCacheDB();
+    const tx = cacheDB.transaction(READING_PROGRESS_STORE, 'readonly');
+    const store = tx.objectStore(READING_PROGRESS_STORE);
+
+    const results: Record<number, ReadingProgress> = {};
+
+    await new Promise<void>((resolve, reject) => {
+      const req = store.openCursor();
+      req.onsuccess = () => {
+        const cursor = req.result;
+        if (cursor) {
+          const progress = cursor.value as ReadingProgress;
+          results[progress.bookId] = progress;
+          cursor.continue();
+        } else {
+          resolve();
+        }
+      };
+      req.onerror = () => reject(req.error);
+    });
+
+    return results;
+  } catch (e) {
+    console.warn('Failed to get all reading progress:', e);
+    return {};
+  }
+}
+
+export async function clearReadingProgress(): Promise<void> {
+  try {
+    const cacheDB = await openCacheDB();
+    const tx = cacheDB.transaction(READING_PROGRESS_STORE, 'readwrite');
+    const store = tx.objectStore(READING_PROGRESS_STORE);
+    store.clear();
+  } catch (e) {
+    console.warn('Failed to clear reading progress:', e);
   }
 }
