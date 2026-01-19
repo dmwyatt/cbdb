@@ -120,13 +120,49 @@ export function EpubReader({ bookData, bookId, bookTitle, onClose }: EpubReaderP
           await rendition.display();
         }
 
-        // Track location changes
+        // Track location changes - store CFI immediately but only update percentage when locations are ready
+        let pendingCfi: string | null = null;
+
         rendition.on('relocated', (location: { start: { cfi: string; percentage: number } }) => {
           if (!mounted) return;
           const cfi = location.start.cfi;
-          const pct = Math.round((location.start.percentage || 0) * 100);
-          setPercentage(pct);
-          saveProgress(cfi, pct);
+          pendingCfi = cfi;
+
+          // Only use percentage after locations are generated (otherwise it's inaccurate)
+          if (bookRef.current?.locations?.length()) {
+            const pct = Math.round((location.start.percentage || 0) * 100);
+            setPercentage(pct);
+            saveProgress(cfi, pct);
+          }
+        });
+
+        // When locations become ready, calculate accurate percentage for current position
+        book.locations.generate(1024).then(() => {
+          if (!mounted) return;
+          setLocationsReady(true);
+
+          const totalLocations = bookRef.current?.locations?.length() || 0;
+          const spineLength = bookRef.current?.spine?.length || 0;
+          log.info(LogCategory.READER, 'Locations generated', {
+            totalLocations,
+            spineLength,
+          });
+
+          // Now calculate accurate percentage for current location
+          if (pendingCfi && bookRef.current) {
+            const percentage = bookRef.current.locations.percentageFromCfi(pendingCfi);
+            const currentLocation = bookRef.current.locations.locationFromCfi(pendingCfi);
+            log.info(LogCategory.READER, 'Current position', {
+              currentLocation,
+              totalLocations,
+              calculatedPercentage: percentage,
+            });
+            if (percentage !== undefined) {
+              const pct = Math.round(percentage * 100);
+              setPercentage(pct);
+              saveProgress(pendingCfi, pct);
+            }
+          }
         });
 
         // Handle keyboard navigation inside iframe
@@ -139,20 +175,41 @@ export function EpubReader({ bookData, bookId, bookTitle, onClose }: EpubReaderP
         });
 
         // Handle tap/click navigation inside iframe (for mobile)
+        // Use a flag to prevent multiple handlers from firing for the same click
+        let isNavigating = false;
         rendition.on('click', (e: MouseEvent) => {
-          // Get the iframe's dimensions
-          const iframe = viewerRef.current?.querySelector('iframe');
-          if (!iframe) return;
+          if (isNavigating) {
+            return;
+          }
 
-          const width = iframe.clientWidth;
-          const clickX = e.clientX;
-          const clickPosition = clickX / width;
+          // In paginated mode, epubjs uses a wide internal container.
+          // e.clientX is relative to this wide container, not the visible viewport.
+          // We need to use the visible viewport width and calculate position within it.
+          const targetWindow = e.view;
+          if (!targetWindow) return;
+
+          // Get the visible viewport width from the main window (parent of iframe)
+          // In epubjs paginated mode, the iframe's document is wider than the visible area,
+          // so we use the main window's width which represents the actual visible viewport
+          const viewportWidth = window.innerWidth;
+
+          // e.clientX in epubjs paginated mode is offset by the current page scroll position.
+          // We need to calculate the position relative to the visible viewport using modulo.
+          const rawClickX = e.clientX;
+          const clickX = rawClickX % viewportWidth;
+          const clickPosition = clickX / viewportWidth;
 
           // Left 25% = previous, Right 25% = next, Middle = toggle controls
           if (clickPosition < 0.25) {
-            rendition.prev();
+            isNavigating = true;
+            rendition.prev().finally(() => {
+              setTimeout(() => { isNavigating = false; }, 100);
+            });
           } else if (clickPosition > 0.75) {
-            rendition.next();
+            isNavigating = true;
+            rendition.next().finally(() => {
+              setTimeout(() => { isNavigating = false; }, 100);
+            });
           } else {
             setShowControls((prev) => !prev);
           }
@@ -187,14 +244,6 @@ export function EpubReader({ bookData, bookId, bookTitle, onClose }: EpubReaderP
         });
 
         setIsLoading(false);
-
-        // Generate locations for slider navigation (do this after initial render)
-        book.locations.generate(1024).then(() => {
-          if (mounted) {
-            setLocationsReady(true);
-            log.debug(LogCategory.READER, 'Locations generated for slider');
-          }
-        });
       } catch (err) {
         log.error(LogCategory.READER, 'Failed to load ePub', err);
         if (mounted) {
@@ -277,24 +326,6 @@ export function EpubReader({ bookData, bookId, bookTitle, onClose }: EpubReaderP
 
   const decreaseFontSize = () => {
     setFontSize((prev) => Math.max(prev - 2, MIN_FONT_SIZE));
-  };
-
-  const handleReaderClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const width = rect.width;
-    const clickPosition = x / width;
-
-    // Left 25% = previous page
-    // Right 25% = next page
-    // Middle 50% = toggle controls
-    if (clickPosition < 0.25) {
-      handlePrev();
-    } else if (clickPosition > 0.75) {
-      handleNext();
-    } else {
-      setShowControls((prev) => !prev);
-    }
   };
 
   const renderTocItems = (items: TocItem[], depth = 0) => {
@@ -398,10 +429,9 @@ export function EpubReader({ bookData, bookId, bookTitle, onClose }: EpubReaderP
         </div>
       </div>
 
-      {/* Reader content with tap zones */}
+      {/* Reader content - navigation handled by rendition.on('click') inside iframe */}
       <div
         className="flex-1 relative overflow-hidden"
-        onClick={handleReaderClick}
       >
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white">
