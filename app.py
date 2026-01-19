@@ -1,9 +1,13 @@
 import logging
 import os
 from functools import wraps
+from urllib.parse import unquote
+
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify, Response, send_from_directory
-from dropbox_api import DropboxAPI, DropboxAuthError, normalize_library_path
+
+from dropbox_api import DropboxAuthError, normalize_library_path
+from storage_factory import get_storage_api, is_local_storage
 
 load_dotenv()
 
@@ -62,14 +66,6 @@ def require_auth(f):
 def get_library_path():
     """Get library path from request header."""
     return request.headers.get('X-Library-Path', '').strip()
-
-
-def get_dropbox_api():
-    """Get DropboxAPI instance. Returns (api, None) or (None, error_message)."""
-    try:
-        return DropboxAPI(), None
-    except ValueError as e:
-        return None, str(e)
 
 
 @app.route('/health')
@@ -134,7 +130,7 @@ def auth_check():
 @require_auth
 def api_config():
     """Return configuration status for the frontend."""
-    api = get_dropbox_api()
+    api, _ = get_storage_api()
     return jsonify({
         'token_configured': api is not None,
     })
@@ -143,8 +139,8 @@ def api_config():
 @app.route('/api/validate-path', methods=['POST'])
 @require_auth
 def api_validate_path():
-    """Validate a library path exists in Dropbox."""
-    api, api_error = get_dropbox_api()
+    """Validate a library path exists in storage."""
+    api, api_error = get_storage_api()
     if not api:
         return jsonify({
             'success': False,
@@ -196,7 +192,7 @@ def download_db():
     Download metadata.db from Dropbox for browser-side SQLite.
     This proxies the download to keep the Dropbox token server-side.
     """
-    api, api_error = get_dropbox_api()
+    api, api_error = get_storage_api()
     if not api:
         return jsonify({
             'success': False,
@@ -257,7 +253,7 @@ def download_link():
     Get a temporary download link for a book file.
     Returns a Dropbox temporary link that can be used for direct download.
     """
-    api, api_error = get_dropbox_api()
+    api, api_error = get_storage_api()
     if not api:
         return jsonify({
             'success': False,
@@ -315,7 +311,7 @@ def book_content():
     Download and proxy book file content (for epub.js reader).
     This is needed because Dropbox temporary links don't support CORS.
     """
-    api, api_error = get_dropbox_api()
+    api, api_error = get_storage_api()
     if not api:
         return jsonify({
             'success': False,
@@ -390,7 +386,7 @@ def get_covers():
     Accepts JSON body: { "paths": ["Author/Book (1)", ...] }
     Returns: { "covers": { "Author/Book (1)": "base64...", ... } }
     """
-    api, api_error = get_dropbox_api()
+    api, api_error = get_storage_api()
     if not api:
         logger.error(f"Covers request failed: {api_error}")
         return jsonify({
@@ -458,6 +454,75 @@ def get_covers():
 
     except Exception as e:
         logger.error(f"Covers request failed with exception: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/local-file')
+@require_auth
+def local_file():
+    """
+    Serve a file from local storage.
+    Only available when STORAGE_BACKEND=local.
+    """
+    if not is_local_storage():
+        return jsonify({
+            'success': False,
+            'error': 'Local file endpoint only available in local storage mode'
+        }), 400
+
+    api, api_error = get_storage_api()
+    if not api:
+        return jsonify({
+            'success': False,
+            'error': api_error
+        }), 500
+
+    # Get file path from query parameter (URL-encoded)
+    file_path = request.args.get('path', '').strip()
+    if file_path:
+        file_path = unquote(file_path)
+
+    if not file_path:
+        return jsonify({
+            'success': False,
+            'error': 'No file path provided. Set path query parameter.'
+        }), 400
+
+    try:
+        # Download from local storage
+        content = api.download_file(file_path)
+
+        # Determine content type based on extension
+        extension = file_path.lower().split('.')[-1] if '.' in file_path else ''
+        content_types = {
+            'epub': 'application/epub+zip',
+            'pdf': 'application/pdf',
+            'mobi': 'application/x-mobipocket-ebook',
+            'azw3': 'application/x-mobipocket-ebook',
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+        }
+        content_type = content_types.get(extension, 'application/octet-stream')
+
+        # Extract filename for Content-Disposition
+        filename = os.path.basename(file_path)
+
+        return Response(
+            content,
+            mimetype=content_type,
+            headers={
+                'Content-Disposition': f'attachment; filename="{filename}"',
+                'Content-Length': len(content),
+                'Cache-Control': 'private, max-age=3600'
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Local file download failed: {e}", exc_info=True)
         return jsonify({
             'success': False,
             'error': str(e)
