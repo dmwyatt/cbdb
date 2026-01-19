@@ -22,7 +22,7 @@ See [FEATURES.md](FEATURES.md) for a complete list of features.
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui
 - **State Management**: Zustand with persistence
 - **Database**: sql.js (WASM SQLite) running in browser, IndexedDB caching
-- **Deployment**: Railway with nixpacks (Node.js + Python)
+- **Deployment**: Fly.io with Docker (Node.js + Python)
 
 ## Setup
 
@@ -39,20 +39,22 @@ See [FEATURES.md](FEATURES.md) for a complete list of features.
 7. Go to the "Settings" tab and click "Generate" under "Generated access token"
 8. Copy the token
 
-### Step 2: Deploy to Railway
+### Step 2: Deploy to Fly.io
 
-1. Go to [railway.app](https://railway.app)
-2. Sign in with GitHub
-3. Click "New Project" → "Deploy from GitHub repo"
-4. Select this repository
-5. In Railway dashboard → Variables → Add:
-   - `DROPBOX_ACCESS_TOKEN` → Your Dropbox access token from Step 1
-   - `APP_PASSWORD` → A password to protect your library (required)
-6. Railway builds and deploys automatically
+1. Install the [Fly CLI](https://fly.io/docs/hands-on/install-flyctl/)
+2. Sign up and log in: `fly auth login`
+3. Clone this repository and navigate to it
+4. Launch the app: `fly launch`
+5. Set your secrets:
+   ```bash
+   fly secrets set DROPBOX_ACCESS_TOKEN="your_token_here"
+   fly secrets set APP_PASSWORD="your_password_here"
+   ```
+6. Deploy: `fly deploy`
 
 ### Step 3: First-Time Setup (In Browser)
 
-1. Railway gives you a URL (like `your-app.railway.app`)
+1. Fly.io gives you a URL (like `your-app.fly.dev`)
 2. Visit that URL
 3. You'll see a setup page asking for your Dropbox library path
 4. Enter the path to your Calibre Library in Dropbox:
@@ -117,8 +119,7 @@ cbdb/
 ├── dropbox_api.py         # Dropbox API client class
 ├── requirements.txt       # Python dependencies
 ├── Dockerfile             # Multi-stage build (Node.js + Python)
-├── Procfile               # Railway/Heroku process file
-├── railway.json           # Railway configuration
+├── fly.toml               # Fly.io configuration
 ├── runtime.txt            # Python version specification
 ├── .env.example           # Environment variable template
 └── frontend/              # React + TypeScript + Vite app
@@ -161,7 +162,7 @@ cbdb/
 ### "Dropbox access token not configured"
 
 - Ensure `DROPBOX_ACCESS_TOKEN` is set in your environment variables
-- On Railway: Check Variables in your project settings
+- On Fly.io: Run `fly secrets list` to verify, or `fly secrets set` to update
 - Locally: Check your `.env` file
 
 ## Security Notes
@@ -185,7 +186,7 @@ See LICENSE file for details.
 
 - Built for [Calibre](https://calibre-ebook.com/) e-book management
 - Uses the [Dropbox API](https://www.dropbox.com/developers)
-- Designed for deployment on [Railway](https://railway.app)
+- Designed for deployment on [Fly.io](https://fly.io)
 - Browser SQLite powered by [sql.js](https://sql.js.org/)
 
 ## Sources
