@@ -1,8 +1,11 @@
 import logging
 import os
 from functools import wraps
+from dotenv import load_dotenv
 from flask import Flask, request, jsonify, Response, send_from_directory
 from dropbox_api import DropboxAPI, DropboxAuthError, normalize_library_path
+
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
