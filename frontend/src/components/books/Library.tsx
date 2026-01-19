@@ -28,6 +28,7 @@ export function Library() {
 
   // Use queryService for all database queries - it handles timing and error handling
   const { books, total, queryTime, queryError } = useMemo(() => {
+    if (!db) return { books: [], total: 0, queryTime: 0, queryError: null };
     const result = queryService.queryBooksWithFilters(
       debouncedSearchTerm,
       filters,

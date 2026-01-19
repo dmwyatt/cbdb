@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeftIcon, BookOpenIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +10,6 @@ import { queryService } from '@/lib/queryService';
 import { coverService } from '@/lib/coverService';
 import { log, LogCategory } from '@/lib/logger';
 import { getReadingProgress, deleteReadingProgress, type ReadingProgress } from '@/lib/indexeddb';
-import type { BookDetail } from '@/types/book';
 
 // Animation constants
 const SCROLL_DISTANCE = 150; // pixels to scroll for full collapse
@@ -31,16 +30,32 @@ const BACK_BUTTON_WIDTH = 40;
 // Linear interpolation helper
 const lerp = (start: number, end: number, t: number) => start + (end - start) * t;
 
+interface CoverState {
+  bookPath: string | null;
+  url: string | null;
+}
+
 export function BookDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { db, libraryPath } = useLibraryStore();
-  const [book, setBook] = useState<BookDetail | null>(null);
-  const [queryTime, setQueryTime] = useState<number>(0);
-  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [coverState, setCoverState] = useState<CoverState>({ bookPath: null, url: null });
   const [scrollY, setScrollY] = useState(0);
   const [readingProgress, setReadingProgress] = useState<ReadingProgress | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+
+  // Parse book ID and get book detail synchronously via useMemo
+  const bookId = id ? parseInt(id, 10) : NaN;
+  const { book, queryTime } = useMemo(() => {
+    if (!db || isNaN(bookId)) {
+      return { book: null, queryTime: 0 };
+    }
+    const result = queryService.getBookDetail(bookId);
+    return { book: result.data, queryTime: result.queryTime };
+  }, [db, bookId]);
+
+  // Derive coverUrl - only show if it matches current book
+  const coverUrl = coverState.bookPath === book?.path ? coverState.url : null;
 
   // Track scroll position
   useEffect(() => {
@@ -62,55 +77,43 @@ export function BookDetailPage() {
   const coverHeight = lerp(COVER_EXPANDED.height, COVER_COLLAPSED.height, progress);
   const titleSize = lerp(TITLE_SIZE_EXPANDED, TITLE_SIZE_COLLAPSED, progress);
 
+  // Handle navigation for invalid book ID or missing book
   useEffect(() => {
-    if (!db || !id) {
-      return;
-    }
-
-    const bookId = parseInt(id, 10);
-    if (isNaN(bookId)) {
+    if (!db || !id) return;
+    if (isNaN(bookId) || !book) {
       navigate('/', { replace: true });
-      return;
     }
+  }, [db, id, bookId, book, navigate]);
 
-    const result = queryService.getBookDetail(bookId);
-    setQueryTime(result.queryTime);
-    const detail = result.data;
-
-    if (!detail) {
-      navigate('/', { replace: true });
-      return;
-    }
-
-    setBook(detail);
+  // Fetch reading progress and cover (async side effects)
+  useEffect(() => {
+    if (!book) return;
 
     // Fetch reading progress
-    getReadingProgress(bookId).then((progress) => {
+    getReadingProgress(book.id).then((progress) => {
       setReadingProgress(progress);
     });
 
     // Fetch cover if available
-    if (detail.has_cover && libraryPath) {
+    if (book.has_cover && libraryPath) {
       coverService.setLibraryPath(libraryPath);
-      coverService.getCover(detail.path).then((cover) => {
+      coverService.getCover(book.path).then((cover) => {
         if (cover) {
-          setCoverUrl(cover);
+          setCoverState({ bookPath: book.path, url: cover });
         }
       }).catch((e) => {
         log.warn(LogCategory.COVER, 'Failed to fetch cover', e);
       });
-    } else {
-      setCoverUrl(null);
     }
-  }, [db, id, libraryPath, navigate]);
+    // Note: No need to explicitly clear cover - derived coverUrl handles mismatch
+  }, [book, libraryPath]);
 
   const handleBack = () => {
     navigate(-1);
   };
 
   const handleResetProgress = async () => {
-    if (!id) return;
-    const bookId = parseInt(id, 10);
+    if (isNaN(bookId)) return;
     await deleteReadingProgress(bookId);
     setReadingProgress(null);
   };
