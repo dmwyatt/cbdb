@@ -6,20 +6,19 @@ Calibre Library Web App - browser-based Calibre e-book library viewer using WASM
 
 ```bash
 # Backend setup
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env  # Then add DROPBOX_ACCESS_TOKEN
+uv sync                    # Creates venv and installs dependencies
+cp .env.example .env       # Then add DROPBOX_ACCESS_TOKEN
 
 # Frontend setup
 cd frontend && npm install && cd ..
 
 # Development (run in separate terminals)
-python app.py              # Backend on http://localhost:5000
+uv run python app.py       # Backend on http://localhost:5000
 cd frontend && npm run dev # Frontend on http://localhost:5173
 
 # Production build
 cd frontend && npm run build
-python app.py  # Serves React build from frontend/dist
+uv run python app.py       # Serves React build from frontend/dist
 ```
 
 ## Project Structure
@@ -27,10 +26,10 @@ python app.py  # Serves React build from frontend/dist
 ```
 app.py                  # Flask server - Dropbox proxy, API endpoints, serves React build
 dropbox_api.py          # Dropbox API client class
-requirements.txt        # Python dependencies
+pyproject.toml          # Python project config and dependencies (managed by uv)
+uv.lock                 # Locked dependency versions
 Dockerfile              # Multi-stage build (Node.js + Python)
 fly.toml                # Fly.io configuration
-runtime.txt             # Python version specification
 .env.example            # Environment variable template
 frontend/               # React + TypeScript + Vite app
 ├── src/
@@ -264,7 +263,7 @@ Update `AGENTS.md` when changes affect how agents/developers work with the code:
 
 Fly.io builds using the multi-stage Dockerfile:
 1. Stage 1: Node.js builds frontend (`npm ci && npm run build`)
-2. Stage 2: Python serves via gunicorn with `--timeout 120`
+2. Stage 2: Python installs dependencies via uv and serves via gunicorn with `--timeout 120`
 
 Required Fly.io setup:
 - `fly secrets set DROPBOX_ACCESS_TOKEN=...`

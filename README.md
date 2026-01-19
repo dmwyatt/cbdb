@@ -89,9 +89,7 @@ The app saves your library path in your browser's localStorage. You only need to
 # Clone and setup backend
 git clone <your-repo>
 cd cbdb
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+uv sync  # Creates venv and installs dependencies
 
 # Create .env file with your access token
 cp .env.example .env
@@ -103,12 +101,12 @@ npm install
 cd ..
 
 # Run development servers (in separate terminals)
-python app.py              # Backend on http://localhost:5000
+uv run python app.py       # Backend on http://localhost:5000
 cd frontend && npm run dev # Frontend on http://localhost:5173
 
 # Or build for production
 cd frontend && npm run build
-python app.py  # Serves React build from frontend/dist at http://localhost:5000
+uv run python app.py  # Serves React build from frontend/dist at http://localhost:5000
 ```
 
 ## Project Structure
@@ -117,10 +115,10 @@ python app.py  # Serves React build from frontend/dist at http://localhost:5000
 cbdb/
 ├── app.py                 # Flask server - API endpoints, serves React build
 ├── dropbox_api.py         # Dropbox API client class
-├── requirements.txt       # Python dependencies
+├── pyproject.toml         # Python project config and dependencies (managed by uv)
+├── uv.lock                # Locked dependency versions
 ├── Dockerfile             # Multi-stage build (Node.js + Python)
 ├── fly.toml               # Fly.io configuration
-├── runtime.txt            # Python version specification
 ├── .env.example           # Environment variable template
 └── frontend/              # React + TypeScript + Vite app
     ├── src/
