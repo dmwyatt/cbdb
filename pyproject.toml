@@ -1,0 +1,11 @@
+[project]
+name = "cbdb"
+version = "1.0.0"
+description = "Browser-based Calibre e-book library viewer using WASM SQLite"
+requires-python = ">=3.11"
+dependencies = [
+    "flask>=3.1.2",
+    "gunicorn>=23.0.0",
+    "python-dotenv>=1.2.1",
+    "requests>=2.32.5",
+]
