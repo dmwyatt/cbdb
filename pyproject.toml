@@ -19,3 +19,8 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+addopts = "-m 'not e2e'"
+markers = [
+    "e2e: end-to-end tests requiring browser (deselected by default)",
+    "smoke: fast sanity checks for critical paths",
+]
