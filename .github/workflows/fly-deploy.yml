@@ -32,8 +32,19 @@ jobs:
         run: npm ci
         working-directory: frontend
 
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+
       - name: Install Playwright browsers
-        run: uv run playwright install --with-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: uv run playwright install chromium
+
+      - name: Install Playwright system dependencies
+        run: uv run playwright install-deps chromium
 
       - name: Run smoke tests
         run: uv run pytest -m smoke
