@@ -2,6 +2,8 @@ import pytest
 from playwright.sync_api import expect
 
 
+@pytest.mark.e2e
+@pytest.mark.smoke
 class TestSmokeTests:
     """Basic smoke tests for app functionality."""
 
