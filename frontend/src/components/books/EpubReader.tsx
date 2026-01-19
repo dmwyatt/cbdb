@@ -120,13 +120,49 @@ export function EpubReader({ bookData, bookId, bookTitle, onClose }: EpubReaderP
           await rendition.display();
         }
 
-        // Track location changes
+        // Track location changes - store CFI immediately but only update percentage when locations are ready
+        let pendingCfi: string | null = null;
+
         rendition.on('relocated', (location: { start: { cfi: string; percentage: number } }) => {
           if (!mounted) return;
           const cfi = location.start.cfi;
-          const pct = Math.round((location.start.percentage || 0) * 100);
-          setPercentage(pct);
-          saveProgress(cfi, pct);
+          pendingCfi = cfi;
+
+          // Only use percentage after locations are generated (otherwise it's inaccurate)
+          if (bookRef.current?.locations?.length()) {
+            const pct = Math.round((location.start.percentage || 0) * 100);
+            setPercentage(pct);
+            saveProgress(cfi, pct);
+          }
+        });
+
+        // When locations become ready, calculate accurate percentage for current position
+        book.locations.generate(1024).then(() => {
+          if (!mounted) return;
+          setLocationsReady(true);
+
+          const totalLocations = bookRef.current?.locations?.length() || 0;
+          const spineLength = bookRef.current?.spine?.length || 0;
+          log.info(LogCategory.READER, 'Locations generated', {
+            totalLocations,
+            spineLength,
+          });
+
+          // Now calculate accurate percentage for current location
+          if (pendingCfi && bookRef.current) {
+            const percentage = bookRef.current.locations.percentageFromCfi(pendingCfi);
+            const currentLocation = bookRef.current.locations.locationFromCfi(pendingCfi);
+            log.info(LogCategory.READER, 'Current position', {
+              currentLocation,
+              totalLocations,
+              calculatedPercentage: percentage,
+            });
+            if (percentage !== undefined) {
+              const pct = Math.round(percentage * 100);
+              setPercentage(pct);
+              saveProgress(pendingCfi, pct);
+            }
+          }
         });
 
         // Handle keyboard navigation inside iframe
@@ -187,14 +223,6 @@ export function EpubReader({ bookData, bookId, bookTitle, onClose }: EpubReaderP
         });
 
         setIsLoading(false);
-
-        // Generate locations for slider navigation (do this after initial render)
-        book.locations.generate(1024).then(() => {
-          if (mounted) {
-            setLocationsReady(true);
-            log.debug(LogCategory.READER, 'Locations generated for slider');
-          }
-        });
       } catch (err) {
         log.error(LogCategory.READER, 'Failed to load ePub', err);
         if (mounted) {
