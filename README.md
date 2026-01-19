@@ -86,27 +86,19 @@ The app saves your library path in your browser's localStorage. You only need to
 ## Local Development
 
 ```bash
-# Clone and setup backend
+# Clone and setup
 git clone <your-repo>
 cd cbdb
-uv sync  # Creates venv and installs dependencies
+uv sync                    # Install Python dependencies
+cd frontend && npm install # Install frontend dependencies
 
-# Create .env file with your access token
+# Create .env file
 cp .env.example .env
-# Edit .env and add your DROPBOX_ACCESS_TOKEN
-
-# Setup frontend
-cd frontend
-npm install
-cd ..
+# Edit .env and add DROPBOX_ACCESS_TOKEN and APP_PASSWORD
 
 # Run development servers (in separate terminals)
 uv run python app.py       # Backend on http://localhost:5000
 cd frontend && npm run dev # Frontend on http://localhost:5173
-
-# Or build for production
-cd frontend && npm run build
-uv run python app.py  # Serves React build from frontend/dist at http://localhost:5000
 ```
 
 ## Project Structure
