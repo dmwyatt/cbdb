@@ -27,6 +27,11 @@ python app.py  # Serves React build from frontend/dist
 ```
 app.py                  # Flask server - Dropbox proxy, API endpoints, serves React build
 dropbox_api.py          # Dropbox API client class
+requirements.txt        # Python dependencies
+Dockerfile              # Multi-stage build (Node.js + Python)
+fly.toml                # Fly.io configuration
+runtime.txt             # Python version specification
+.env.example            # Environment variable template
 frontend/               # React + TypeScript + Vite app
 ├── src/
 │   ├── components/     # React components
@@ -46,7 +51,7 @@ frontend/               # React + TypeScript + Vite app
 ## Tech Stack
 
 - **Backend**: Flask 3.0, Python 3.11
-- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui
+- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS, shadcn/ui
 - **State Management**: Zustand with persistence
 - **Database**: sql.js (WASM SQLite), IndexedDB caching
 - **Deployment**: Fly.io with Docker (Node.js + Python)
@@ -193,6 +198,7 @@ This catches SQL syntax errors that may be silently caught in the browser. Remem
 
 ### Environment variables
 - `DROPBOX_ACCESS_TOKEN` - Required, Dropbox API token
+- `APP_PASSWORD` - Required, password to protect access to the library
 - `FLASK_DEBUG` - Optional, enables debug mode
 - `PORT` - Optional, default 5000
 
