@@ -62,11 +62,11 @@ def get_library_path():
 
 
 def get_dropbox_api():
-    """Get DropboxAPI instance. Returns None if not configured."""
+    """Get DropboxAPI instance. Returns (api, None) or (None, error_message)."""
     try:
-        return DropboxAPI()
-    except ValueError:
-        return None
+        return DropboxAPI(), None
+    except ValueError as e:
+        return None, str(e)
 
 
 @app.route('/health')
@@ -141,12 +141,13 @@ def api_config():
 @require_auth
 def api_validate_path():
     """Validate a library path exists in Dropbox."""
-    api = get_dropbox_api()
+    api, api_error = get_dropbox_api()
     if not api:
         return jsonify({
             'success': False,
-            'error': 'Dropbox access token not configured. Set DROPBOX_ACCESS_TOKEN environment variable.'
-        }), 500
+            'error': api_error,
+            'error_code': 'DROPBOX_AUTH_FAILED'
+        }), 401
 
     data = request.json or {}
     library_path = data.get('library_path', '').strip()
@@ -192,12 +193,13 @@ def download_db():
     Download metadata.db from Dropbox for browser-side SQLite.
     This proxies the download to keep the Dropbox token server-side.
     """
-    api = get_dropbox_api()
+    api, api_error = get_dropbox_api()
     if not api:
         return jsonify({
             'success': False,
-            'error': 'Dropbox access token not configured'
-        }), 500
+            'error': api_error,
+            'error_code': 'DROPBOX_AUTH_FAILED'
+        }), 401
 
     library_path = get_library_path()
     if not library_path:
@@ -252,12 +254,13 @@ def download_link():
     Get a temporary download link for a book file.
     Returns a Dropbox temporary link that can be used for direct download.
     """
-    api = get_dropbox_api()
+    api, api_error = get_dropbox_api()
     if not api:
         return jsonify({
             'success': False,
-            'error': 'Dropbox access token not configured'
-        }), 500
+            'error': api_error,
+            'error_code': 'DROPBOX_AUTH_FAILED'
+        }), 401
 
     library_path = get_library_path()
     if not library_path:
@@ -310,13 +313,14 @@ def get_covers():
     Accepts JSON body: { "paths": ["Author/Book (1)", ...] }
     Returns: { "covers": { "Author/Book (1)": "base64...", ... } }
     """
-    api = get_dropbox_api()
+    api, api_error = get_dropbox_api()
     if not api:
-        logger.error("Covers request failed: Dropbox API not configured")
+        logger.error(f"Covers request failed: {api_error}")
         return jsonify({
             'success': False,
-            'error': 'Dropbox access token not configured'
-        }), 500
+            'error': api_error,
+            'error_code': 'DROPBOX_AUTH_FAILED'
+        }), 401
 
     library_path = get_library_path()
     if not library_path:
