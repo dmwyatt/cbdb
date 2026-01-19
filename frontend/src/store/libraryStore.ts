@@ -216,7 +216,7 @@ export const useLibraryStore = create<LibraryState>()(
             queryService.setDatabase(null);
           }
 
-          // Handle Dropbox auth errors specially
+          // Handle Dropbox auth errors specially - keep libraryPath so user can retry after fixing token
           if (isDropboxAuthError(error)) {
             set({
               isLoading: false,
@@ -226,12 +226,13 @@ export const useLibraryStore = create<LibraryState>()(
               ...(forceRefresh ? {} : { db: null }),
             });
           } else {
+            // For other errors (e.g., "File not found"), clear libraryPath so user can enter a new one
             set({
               isLoading: false,
               loadingProgress: 0,
               loadingMessage: '',
               error: errorMessage,
-              ...(forceRefresh ? {} : { db: null }),
+              ...(forceRefresh ? {} : { db: null, libraryPath: null }),
             });
           }
         }
