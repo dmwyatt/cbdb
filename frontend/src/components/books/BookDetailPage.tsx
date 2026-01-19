@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeftIcon } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { ArrowLeftIcon, BookOpenIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { StarRating } from '@/components/common/StarRating';
@@ -9,6 +9,7 @@ import { useLibraryStore } from '@/store/libraryStore';
 import { queryService } from '@/lib/queryService';
 import { coverService } from '@/lib/coverService';
 import { log, LogCategory } from '@/lib/logger';
+import { getReadingProgress, type ReadingProgress } from '@/lib/indexeddb';
 import type { BookDetail } from '@/types/book';
 
 // Animation constants
@@ -38,6 +39,7 @@ export function BookDetailPage() {
   const [queryTime, setQueryTime] = useState<number>(0);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [scrollY, setScrollY] = useState(0);
+  const [readingProgress, setReadingProgress] = useState<ReadingProgress | null>(null);
   const headerRef = useRef<HTMLDivElement>(null);
 
   // Track scroll position
@@ -81,6 +83,11 @@ export function BookDetailPage() {
     }
 
     setBook(detail);
+
+    // Fetch reading progress
+    getReadingProgress(bookId).then((progress) => {
+      setReadingProgress(progress);
+    });
 
     // Fetch cover if available
     if (detail.has_cover && libraryPath) {
@@ -243,6 +250,27 @@ export function BookDetailPage() {
                 {tag}
               </Badge>
             ))}
+          </div>
+        )}
+
+        {/* Read button for EPUB books */}
+        {book.formats.some((f) => f.format.toUpperCase() === 'EPUB') && (
+          <div>
+            <Link to={`/book/${book.id}/read`}>
+              <Button size="lg" className="gap-2">
+                <BookOpenIcon className="h-5 w-5" />
+                {readingProgress ? (
+                  <>Continue Reading ({readingProgress.percentage}%)</>
+                ) : (
+                  <>Read Book</>
+                )}
+              </Button>
+            </Link>
+            {readingProgress && (
+              <p className="text-xs text-slate-500 mt-1">
+                Last read: {new Date(readingProgress.lastRead).toLocaleDateString()}
+              </p>
+            )}
           </div>
         )}
 

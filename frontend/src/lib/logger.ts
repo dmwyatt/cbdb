@@ -17,6 +17,7 @@ export const LogCategory = {
   QUERY: 'query',
   DATABASE: 'database',
   NETWORK: 'network',
+  READER: 'reader',
 } as const;
 
 export type LogCategory = (typeof LogCategory)[keyof typeof LogCategory];

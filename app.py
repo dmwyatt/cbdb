@@ -305,6 +305,79 @@ def download_link():
         }), 500
 
 
+@app.route('/api/book-content')
+@require_auth
+def book_content():
+    """
+    Download and proxy book file content (for epub.js reader).
+    This is needed because Dropbox temporary links don't support CORS.
+    """
+    api = get_dropbox_api()
+    if not api:
+        return jsonify({
+            'success': False,
+            'error': 'Dropbox access token not configured'
+        }), 500
+
+    library_path = get_library_path()
+    if not library_path:
+        return jsonify({
+            'success': False,
+            'error': 'No library path provided. Set X-Library-Path header.'
+        }), 400
+
+    # Get file path from query parameter
+    file_path = request.args.get('path', '').strip()
+    if not file_path:
+        return jsonify({
+            'success': False,
+            'error': 'No file path provided. Set path query parameter.'
+        }), 400
+
+    try:
+        library_path = normalize_library_path(library_path)
+        full_path = f"{library_path}/{file_path}"
+
+        logger.info(f"Downloading book content: {full_path}")
+
+        # Download from Dropbox
+        content = api.download_file(full_path)
+
+        # Determine content type based on extension
+        extension = file_path.lower().split('.')[-1] if '.' in file_path else ''
+        content_types = {
+            'epub': 'application/epub+zip',
+            'pdf': 'application/pdf',
+            'mobi': 'application/x-mobipocket-ebook',
+            'azw3': 'application/x-mobipocket-ebook',
+        }
+        content_type = content_types.get(extension, 'application/octet-stream')
+
+        # Return as binary response
+        return Response(
+            content,
+            mimetype=content_type,
+            headers={
+                'Content-Length': len(content),
+                'Cache-Control': 'private, max-age=3600'  # Cache for 1 hour
+            }
+        )
+
+    except DropboxAuthError as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'error_code': 'DROPBOX_AUTH_FAILED'
+        }), 401
+
+    except Exception as e:
+        logger.error(f"Book content download failed: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @app.route('/api/covers', methods=['POST'])
 @require_auth
 def get_covers():
