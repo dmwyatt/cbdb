@@ -6,7 +6,7 @@ import { useLibraryStore } from '@/store/libraryStore';
 
 export function SetupForm() {
   const [path, setPath] = useState('');
-  const { setLibraryPath, loadDatabase, isLoading, error, clearError } = useLibraryStore();
+  const { setLibraryPath, loadDatabase, isLoading, error, dropboxError, clearError, clearDropboxError } = useLibraryStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -14,6 +14,7 @@ export function SetupForm() {
     if (!trimmedPath) return;
 
     clearError();
+    clearDropboxError();
     setLibraryPath(trimmedPath);
     await loadDatabase();
   };
@@ -29,9 +30,9 @@ export function SetupForm() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {error && (
+          {(error || dropboxError) && (
             <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4">
-              {error}
+              {error || dropboxError}
             </div>
           )}
 

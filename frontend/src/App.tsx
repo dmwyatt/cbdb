@@ -24,11 +24,12 @@ function App() {
   }, [checkAuth]);
 
   // Auto-load database if we have a saved library path and are authenticated
+  // Don't auto-retry if there's an error - let user trigger retry manually
   useEffect(() => {
-    if (isAuthenticated && libraryPath && !db && !isLoading) {
+    if (isAuthenticated && libraryPath && !db && !isLoading && !error && !dropboxError) {
       loadDatabase();
     }
-  }, [isAuthenticated, libraryPath, db, isLoading, loadDatabase]);
+  }, [isAuthenticated, libraryPath, db, isLoading, error, dropboxError, loadDatabase]);
 
   // Show loading spinner while checking auth
   if (isCheckingAuth) {
@@ -94,8 +95,8 @@ function App() {
       <div className="min-h-screen flex flex-col bg-slate-50">
         <Header />
 
-        {/* Dropbox auth error banner */}
-        <DropboxErrorBanner error={dropboxError} onDismiss={clearDropboxError} />
+        {/* Dropbox auth error banner - only show when library is loaded (setup form handles its own errors) */}
+        {showLibrary && <DropboxErrorBanner error={dropboxError} onDismiss={clearDropboxError} />}
 
         {isLoading && !error && (
           <LoadingOverlay message={loadingMessage} progress={loadingProgress} onCancel={cancelLoading} />
