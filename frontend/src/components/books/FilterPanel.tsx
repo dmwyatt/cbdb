@@ -60,6 +60,7 @@ export function FilterPanel() {
 
   // Get filter options from the database
   const filterOptions = useMemo(() => {
+    if (!db) return { tags: [], series: [], publishers: [], formats: [] };
     return queryService.getFilterOptions().data;
   }, [db]);
 

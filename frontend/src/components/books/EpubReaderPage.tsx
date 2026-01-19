@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { EpubReader } from './EpubReader';
 import { useLibraryStore } from '@/store/libraryStore';
@@ -6,55 +6,55 @@ import { queryService } from '@/lib/queryService';
 import { fetchBookContent } from '@/lib/api';
 import { log, LogCategory } from '@/lib/logger';
 import { showGlobalError } from '@/lib/errorService';
-import type { BookDetail } from '@/types/book';
 
 export function EpubReaderPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { db, libraryPath } = useLibraryStore();
 
-  const [book, setBook] = useState<BookDetail | null>(null);
   const [epubData, setEpubData] = useState<ArrayBuffer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Loading reader...');
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!db || !id || !libraryPath) {
-      return;
+  // Parse book ID and get book detail synchronously via useMemo
+  const bookId = id ? parseInt(id, 10) : NaN;
+  const book = useMemo(() => {
+    if (!db || isNaN(bookId)) {
+      return null;
     }
-
-    const bookId = parseInt(id, 10);
-    if (isNaN(bookId)) {
-      navigate('/', { replace: true });
-      return;
-    }
-
     const result = queryService.getBookDetail(bookId);
-    const detail = result.data;
+    return result.data;
+  }, [db, bookId]);
 
-    if (!detail) {
+  // Get EPUB format info
+  const epubFormat = useMemo(() => {
+    if (!book) return null;
+    return book.formats.find((f) => f.format.toUpperCase() === 'EPUB') ?? null;
+  }, [book]);
+
+  // Handle navigation for invalid states
+  useEffect(() => {
+    if (!db || !id || !libraryPath) return;
+
+    if (isNaN(bookId) || !book) {
       navigate('/', { replace: true });
       return;
     }
-
-    // Check if book has EPUB format
-    const epubFormat = detail.formats.find(
-      (f) => f.format.toUpperCase() === 'EPUB'
-    );
 
     if (!epubFormat) {
       showGlobalError('This book does not have an EPUB format available');
       navigate(`/book/${bookId}`, { replace: true });
-      return;
     }
+  }, [db, id, libraryPath, bookId, book, epubFormat, navigate]);
 
-    setBook(detail);
+  // Download the EPUB file
+  useEffect(() => {
+    if (!book || !epubFormat || !libraryPath) return;
 
-    // Download the EPUB file
     const loadEpub = async () => {
       try {
-        const filePath = `${detail.path}/${epubFormat.name}.epub`;
+        const filePath = `${book.path}/${epubFormat.name}.epub`;
         log.info(LogCategory.READER, 'Downloading EPUB content', { filePath });
         setLoadingMessage('Downloading book...');
 
@@ -71,12 +71,16 @@ export function EpubReaderPage() {
     };
 
     loadEpub();
-  }, [db, id, libraryPath, navigate]);
+  }, [book, epubFormat, libraryPath]);
 
   const handleClose = () => {
-    // Go back in history instead of pushing new route to avoid
-    // back button returning to reader
-    navigate(-1);
+    // Go back in history if possible, otherwise go to book detail page
+    // This handles the case where user navigated directly to the reader URL
+    if (window.history.state && window.history.state.idx > 0) {
+      navigate(-1);
+    } else {
+      navigate(`/book/${id}`, { replace: true });
+    }
   };
 
   if (!libraryPath) {

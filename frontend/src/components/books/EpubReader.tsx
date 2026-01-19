@@ -142,7 +142,8 @@ export function EpubReader({ bookData, bookId, bookTitle, onClose }: EpubReaderP
           setLocationsReady(true);
 
           const totalLocations = bookRef.current?.locations?.length() || 0;
-          const spineLength = bookRef.current?.spine?.length || 0;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const spineLength = (bookRef.current?.spine as any)?.length || 0;
           log.info(LogCategory.READER, 'Locations generated', {
             totalLocations,
             spineLength,
