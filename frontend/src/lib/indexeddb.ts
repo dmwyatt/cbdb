@@ -253,13 +253,18 @@ export async function getAllReadingProgress(): Promise<Record<number, ReadingPro
   }
 }
 
-export async function clearReadingProgress(): Promise<void> {
+export async function deleteReadingProgress(bookId: number): Promise<void> {
   try {
     const cacheDB = await openCacheDB();
     const tx = cacheDB.transaction(READING_PROGRESS_STORE, 'readwrite');
     const store = tx.objectStore(READING_PROGRESS_STORE);
-    store.clear();
+    store.delete(`book_${bookId}`);
+
+    await new Promise<void>((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
   } catch (e) {
-    console.warn('Failed to clear reading progress:', e);
+    console.warn('Failed to delete reading progress:', e);
   }
 }
