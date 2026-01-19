@@ -9,7 +9,7 @@ import { useLibraryStore } from '@/store/libraryStore';
 import { queryService } from '@/lib/queryService';
 import { coverService } from '@/lib/coverService';
 import { log, LogCategory } from '@/lib/logger';
-import { getReadingProgress, type ReadingProgress } from '@/lib/indexeddb';
+import { getReadingProgress, deleteReadingProgress, type ReadingProgress } from '@/lib/indexeddb';
 import type { BookDetail } from '@/types/book';
 
 // Animation constants
@@ -106,6 +106,13 @@ export function BookDetailPage() {
 
   const handleBack = () => {
     navigate(-1);
+  };
+
+  const handleResetProgress = async () => {
+    if (!id) return;
+    const bookId = parseInt(id, 10);
+    await deleteReadingProgress(bookId);
+    setReadingProgress(null);
   };
 
   if (!book) {
@@ -269,6 +276,13 @@ export function BookDetailPage() {
             {readingProgress && (
               <p className="text-xs text-slate-500 mt-1">
                 Last read: {new Date(readingProgress.lastRead).toLocaleDateString()}
+                {' · '}
+                <button
+                  onClick={handleResetProgress}
+                  className="text-slate-400 hover:text-slate-600 underline"
+                >
+                  Reset progress
+                </button>
               </p>
             )}
           </div>
