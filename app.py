@@ -312,12 +312,13 @@ def book_content():
     Download and proxy book file content (for epub.js reader).
     This is needed because Dropbox temporary links don't support CORS.
     """
-    api = get_dropbox_api()
+    api, api_error = get_dropbox_api()
     if not api:
         return jsonify({
             'success': False,
-            'error': 'Dropbox access token not configured'
-        }), 500
+            'error': api_error,
+            'error_code': 'DROPBOX_AUTH_FAILED'
+        }), 401
 
     library_path = get_library_path()
     if not library_path:
